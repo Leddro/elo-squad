@@ -1,0 +1,88 @@
+# ============================================================
+# SEGREDOS — nunca versionar (a chave da Riot fica só no proxy)
+# ============================================================
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+google-services.json
+GoogleService-Info.plist
+firebase_options.dart
+key.properties
+*.jks
+*.keystore
+
+# ============================================================
+# Flutter / Dart
+# ============================================================
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+build/
+coverage/
+*.g.dart.bak
+
+# Arquivos gerados que NÃO ignoramos de propósito:
+# *.g.dart e *.freezed.dart — decidir na fase 2 (ver README)
+
+# Android
+android/.gradle/
+android/captures/
+android/local.properties
+android/app/debug
+android/app/profile
+android/app/release
+**/android/**/gradle-wrapper.jar
+**/android/gradlew
+**/android/gradlew.bat
+**/android/**/GeneratedPluginRegistrant.java
+
+# iOS / macOS
+**/ios/Flutter/.last_build_id
+**/ios/Pods/
+**/ios/.symlinks/
+**/ios/Flutter/Flutter.framework
+**/ios/Flutter/Flutter.podspec
+**/ios/Flutter/Generated.xcconfig
+**/ios/Flutter/ephemeral/
+**/ios/Runner/GeneratedPluginRegistrant.*
+**/macos/Flutter/ephemeral/
+**/xcuserdata/
+
+# Windows / Linux (fase 5)
+**/windows/flutter/ephemeral/
+**/linux/flutter/ephemeral/
+
+# Web
+lib/generated_plugin_registrant.dart
+
+# ============================================================
+# Backend proxy (Python / FastAPI)
+# ============================================================
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# ============================================================
+# IDEs e sistema
+# ============================================================
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/*
+!.vscode/settings.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.DS_Store
+Thumbs.db
+*.log
+*.swp
