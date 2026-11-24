@@ -11,7 +11,10 @@ void main() {
       '  Fulano#BR1  ': RiotId('Fulano', 'BR1'),
       'Fulano # BR1': RiotId('Fulano', 'BR1'),
       'Abc#123': RiotId('Abc', '123'), // limites mínimos (3 e 3)
-      'NomeComDezesseis#12345': RiotId('NomeComDezesseis', '12345'), // limites máximos (16 e 5)
+      'NomeComDezesseis#12345': RiotId(
+        'NomeComDezesseis',
+        '12345',
+      ), // limites máximos (16 e 5)
     };
 
     for (final MapEntry(key: entrada, value: esperado) in validos.entries) {
@@ -59,14 +62,23 @@ void main() {
       );
     });
 
-    test('funciona como chave de Set/Map (é o que o .family do Riverpod faz)', () {
-      final buscas = {const RiotId('Fulano', 'BR1'), const RiotId('FULANO', 'br1')};
+    test(
+      'funciona como chave de Set/Map (é o que o .family do Riverpod faz)',
+      () {
+        final buscas = {
+          const RiotId('Fulano', 'BR1'),
+          const RiotId('FULANO', 'br1'),
+        };
 
-      expect(buscas, hasLength(1));
-    });
+        expect(buscas, hasLength(1));
+      },
+    );
 
     test('contas diferentes → diferentes', () {
-      expect(const RiotId('Fulano', 'BR1'), isNot(const RiotId('Fulano', 'BR2')));
+      expect(
+        const RiotId('Fulano', 'BR1'),
+        isNot(const RiotId('Fulano', 'BR2')),
+      );
     });
   });
 
