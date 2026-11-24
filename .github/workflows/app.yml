@@ -1,0 +1,59 @@
+# CI do app Flutter: formatação, análise estática e testes a cada push/PR.
+name: App (Flutter)
+
+on:
+  push:
+    branches: [main]
+    # Só roda se algo do app (ou este próprio arquivo) mudou.
+    # Uma mudança só no backend não gasta minutos de CI aqui.
+    paths:
+      - "app/**"
+      - ".github/workflows/app.yml"
+  pull_request:
+    paths:
+      - "app/**"
+      - ".github/workflows/app.yml"
+  workflow_dispatch: # botão "Run workflow" na aba Actions, para rodar à mão
+
+# Dois pushes seguidos na mesma branch: cancela a execução antiga,
+# porque só o resultado do commit mais novo interessa.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# Princípio do menor privilégio: o CI só precisa LER o código.
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Analyze & test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: app # todo `run:` abaixo roda dentro de app/
+
+    steps:
+      - name: Baixar o código
+        uses: actions/checkout@v7
+
+      - name: Instalar o Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.50.0 # a MESMA versão da máquina local
+          cache: true # guarda o SDK entre execuções (bem mais rápido)
+
+      - name: Baixar dependências
+        run: flutter pub get
+
+      - name: Conferir formatação
+        # --set-exit-if-changed: falha se algum arquivo NÃO estiver formatado.
+        run: dart format --output=none --set-exit-if-changed lib test
+
+      - name: Análise estática
+        run: flutter analyze
+
+      - name: Testes
+        run: flutter test

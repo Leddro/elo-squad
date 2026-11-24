@@ -1,0 +1,51 @@
+# CI do backend proxy (FastAPI): testes a cada push/PR.
+name: Backend (FastAPI)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend.yml"
+  pull_request:
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - name: Baixar o código
+        uses: actions/checkout@v7
+
+      - name: Instalar o uv
+        uses: astral-sh/setup-uv@v10
+        with:
+          working-directory: backend
+          enable-cache: true # cacheia os pacotes, com a chave baseada no uv.lock
+
+      - name: Instalar dependências
+        # O uv lê o .python-version e baixa o Python 3.15 sozinho.
+        # --locked: FALHA se o uv.lock não bater com o pyproject.toml
+        # (alguém adicionou uma dependência e esqueceu de atualizar o lock).
+        run: uv sync --locked
+
+      - name: Testes
+        # Sem RIOT_API_KEY de propósito: os testes simulam a Riot
+        # (httpx.MockTransport) e não leem o .env. A chave nunca vai para o CI.
+        run: uv run python -m pytest -v

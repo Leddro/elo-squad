@@ -1,8 +1,11 @@
 # Elo Squad
 
+[![App (Flutter)](https://github.com/Leddro/elo-squad/actions/workflows/app.yml/badge.svg)](https://github.com/Leddro/elo-squad/actions/workflows/app.yml)
+[![Backend (FastAPI)](https://github.com/Leddro/elo-squad/actions/workflows/backend.yml/badge.svg)](https://github.com/Leddro/elo-squad/actions/workflows/backend.yml)
+
 App Flutter para acompanhar o elo, o histórico de partidas e os campeões mais jogados de um grupo de amigos, com um ranking semanal entre eles. Também tem suporte a TFT.
 
-> 🚧 Em desenvolvimento: fase 1 (busca de invocador).
+> 🚧 Em desenvolvimento. Fase 1 (busca de invocador) concluída; próxima: histórico de partidas.
 
 ## Stack
 
@@ -31,7 +34,7 @@ O app **nunca** tem acesso à chave da API. Se ela estivesse no APK, qualquer pe
 
 ## Roadmap
 
-- [ ] **Fase 1**: busca de invocador (Riot ID → elo, nível, maestrias)
+- [x] **Fase 1**: busca de invocador (Riot ID → elo, nível, maestrias)
 - [ ] **Fase 2**: histórico de partidas com paginação e cache offline
 - [ ] **Fase 3**: grupo de amigos, ranking semanal e notificações push
 - [ ] **Fase 4**: TFT, go_router e teste fechado na Play Store
