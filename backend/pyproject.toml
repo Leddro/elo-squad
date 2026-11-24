@@ -1,0 +1,23 @@
+[project]
+name = "elo-squad-proxy"
+version = "0.1.0"
+description = "Proxy (BFF) do Elo Squad: guarda a chave da Riot, agrega e cacheia respostas."
+readme = "README.md"
+authors = [
+    { name = "Leddro", email = "leandrosantanamartins@hotmail.com" }
+]
+requires-python = ">=3.15"
+dependencies = [
+    "fastapi[standard]>=0.165.0",
+    "httpx>=0.28.1",
+    "pydantic-settings>=2.16.3",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.2.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
