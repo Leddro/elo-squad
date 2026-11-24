@@ -4,4 +4,9 @@
          to allow setting breakpoints, to provide hot reload, etc.
     -->
     <uses-permission android:name="android.permission.INTERNET"/>
+
+    <!-- Só no DEBUG: permite HTTP sem criptografia para falar com o proxy local
+         (http://10.0.2.2:8000). O Android 9+ bloqueia HTTP por padrão. Em release,
+         o proxy publicado deve usar HTTPS, então isto não vai para a Play Store. -->
+    <application android:usesCleartextTraffic="true"/>
 </manifest>

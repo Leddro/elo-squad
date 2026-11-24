@@ -1,0 +1,30 @@
+{
+  "riotId": {
+    "gameName": "Fulano",
+    "tagLine": "BR1"
+  },
+  "puuid": "puuid-123",
+  "level": 347,
+  "profileIconUrl": "https://ddragon.leagueoflegends.com/cdn/16.23.1/img/profileicon/4568.png",
+  "ranked": {
+    "solo": {
+      "tier": "GOLD",
+      "division": "II",
+      "lp": 54,
+      "wins": 40,
+      "losses": 35
+    },
+    "flex": null
+  },
+  "topMasteries": [
+    {
+      "championId": 62,
+      "championName": "Wukong",
+      "championIconUrl": "https://ddragon.leagueoflegends.com/cdn/16.23.1/img/champion/MonkeyKing.png",
+      "level": 12,
+      "points": 245000
+    }
+  ],
+  "unavailable": [],
+  "fetchedAt": "2026-11-24T14:03:00Z"
+}
