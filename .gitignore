@@ -15,50 +15,11 @@ key.properties
 
 # ============================================================
 # Flutter / Dart
+# As regras específicas ficam em app/.gitignore e app/android/.gitignore
+# (gerados pelo flutter create). Aqui, só uma rede de segurança.
 # ============================================================
 .dart_tool/
-.flutter-plugins
-.flutter-plugins-dependencies
-.packages
-.pub-cache/
-.pub/
 build/
-coverage/
-*.g.dart.bak
-
-# Arquivos gerados que NÃO ignoramos de propósito:
-# *.g.dart e *.freezed.dart — decidir na fase 2 (ver README)
-
-# Android
-android/.gradle/
-android/captures/
-android/local.properties
-android/app/debug
-android/app/profile
-android/app/release
-**/android/**/gradle-wrapper.jar
-**/android/gradlew
-**/android/gradlew.bat
-**/android/**/GeneratedPluginRegistrant.java
-
-# iOS / macOS
-**/ios/Flutter/.last_build_id
-**/ios/Pods/
-**/ios/.symlinks/
-**/ios/Flutter/Flutter.framework
-**/ios/Flutter/Flutter.podspec
-**/ios/Flutter/Generated.xcconfig
-**/ios/Flutter/ephemeral/
-**/ios/Runner/GeneratedPluginRegistrant.*
-**/macos/Flutter/ephemeral/
-**/xcuserdata/
-
-# Windows / Linux (fase 5)
-**/windows/flutter/ephemeral/
-**/linux/flutter/ephemeral/
-
-# Web
-lib/generated_plugin_registrant.dart
 
 # ============================================================
 # Backend proxy (Python / FastAPI)
