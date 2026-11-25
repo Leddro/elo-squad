@@ -53,10 +53,10 @@ jobs:
         # Roda ANTES da geração: só confere o código escrito à mão.
         run: dart format --output=none --set-exit-if-changed lib test
 
-      - name: Gerar código (freezed, json_serializable)
+      - name: Gerar código (freezed, json_serializable, drift)
         # Os arquivos *.g.dart e *.freezed.dart não são versionados: o CI
         # gera do zero, então um gerado desatualizado nunca passa despercebido.
-        run: dart run build_runner build --delete-conflicting-outputs
+        run: dart run build_runner build
 
       - name: Análise estática
         run: flutter analyze

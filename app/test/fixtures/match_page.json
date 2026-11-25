@@ -1,0 +1,107 @@
+{
+  "matches": [
+    {
+      "matchId": "BR1_3000000003",
+      "queue": "RANKED_SOLO",
+      "result": "WIN",
+      "placement": null,
+      "championId": 62,
+      "championName": "Wukong",
+      "championIconUrl": "https://ddragon.leagueoflegends.com/cdn/16.23.1/img/champion/MonkeyKing.png",
+      "kills": 8,
+      "deaths": 2,
+      "assists": 11,
+      "cs": 187,
+      "items": [
+        {
+          "itemId": 3078,
+          "iconUrl": "https://ddragon.leagueoflegends.com/cdn/16.23.1/img/item/3078.png"
+        },
+        {
+          "itemId": 3047,
+          "iconUrl": "https://ddragon.leagueoflegends.com/cdn/16.23.1/img/item/3047.png"
+        },
+        {
+          "itemId": 6333,
+          "iconUrl": "https://ddragon.leagueoflegends.com/cdn/16.23.1/img/item/6333.png"
+        },
+        {
+          "itemId": 3053,
+          "iconUrl": "https://ddragon.leagueoflegends.com/cdn/16.23.1/img/item/3053.png"
+        },
+        {
+          "itemId": 3742,
+          "iconUrl": "https://ddragon.leagueoflegends.com/cdn/16.23.1/img/item/3742.png"
+        },
+        {
+          "itemId": 1036,
+          "iconUrl": "https://ddragon.leagueoflegends.com/cdn/16.23.1/img/item/1036.png"
+        }
+      ],
+      "trinket": {
+        "itemId": 3364,
+        "iconUrl": "https://ddragon.leagueoflegends.com/cdn/16.23.1/img/item/3364.png"
+      },
+      "durationSeconds": 1834,
+      "playedAt": "2026-11-24T22:15:00Z"
+    },
+    {
+      "matchId": "BR1_3000000002",
+      "queue": "ARAM",
+      "result": "LOSS",
+      "placement": null,
+      "championId": 99,
+      "championName": null,
+      "championIconUrl": null,
+      "kills": 3,
+      "deaths": 0,
+      "assists": 25,
+      "cs": 40,
+      "items": [
+        {
+          "itemId": 3020,
+          "iconUrl": "https://ddragon.leagueoflegends.com/cdn/16.23.1/img/item/3020.png"
+        },
+        null,
+        {
+          "itemId": 6655,
+          "iconUrl": "https://ddragon.leagueoflegends.com/cdn/16.23.1/img/item/6655.png"
+        },
+        null,
+        null,
+        null
+      ],
+      "trinket": null,
+      "durationSeconds": 1102,
+      "playedAt": "2026-11-24T21:30:00Z"
+    },
+    {
+      "matchId": "BR1_3000000001",
+      "queue": "ARENA",
+      "result": "LOSS",
+      "placement": 5,
+      "championId": 62,
+      "championName": "Wukong",
+      "championIconUrl": "https://ddragon.leagueoflegends.com/cdn/16.23.1/img/champion/MonkeyKing.png",
+      "kills": 6,
+      "deaths": 4,
+      "assists": 3,
+      "cs": 0,
+      "items": [
+        {
+          "itemId": 3078,
+          "iconUrl": "https://ddragon.leagueoflegends.com/cdn/16.23.1/img/item/3078.png"
+        },
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "trinket": null,
+      "durationSeconds": 1200,
+      "playedAt": "2026-11-23T18:00:00Z"
+    }
+  ],
+  "nextStart": 3
+}

@@ -48,6 +48,6 @@ app.*.map.json
 .widget_preview/
 
 # Código gerado pelo build_runner: recriado com
-#   dart run build_runner build --delete-conflicting-outputs
+#   dart run build_runner build
 *.g.dart
 *.freezed.dart

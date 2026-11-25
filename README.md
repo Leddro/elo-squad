@@ -16,7 +16,7 @@ App Flutter para acompanhar o elo, o histórico de partidas e os campeões mais 
 | Estado | Riverpod |
 | HTTP | Dio + interceptors |
 | Modelos | freezed + json_serializable |
-| Cache offline | Hive ou Isar (a definir) |
+| Cache offline | drift (SQLite) |
 | Backend proxy | FastAPI: guarda a chave da API |
 | Social | Firebase (Firestore + FCM) |
 | Navegação | go_router |
@@ -52,14 +52,14 @@ cd elo-squad
 cd backend
 copy .env.example .env            # edite e cole a RIOT_API_KEY
 uv sync
-uv run python -m pytest           # 10 testes
+uv run python -m pytest           # 27 testes
 uv run fastapi dev app/main.py    # http://127.0.0.1:8000/docs
 
 # App (em outro terminal)
 cd app
 flutter pub get
-dart run build_runner build --delete-conflicting-outputs   # gera *.g.dart e *.freezed.dart
-flutter test                      # 83 testes
+dart run build_runner build       # gera *.g.dart e *.freezed.dart
+flutter test                      # 107 testes
 ```
 
 **Rodar no celular por USB** (com o proxy rodando no PC):
