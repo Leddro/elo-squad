@@ -1,0 +1,41 @@
+rules_version = '2';
+
+// O app só LÊ. Toda escrita passa pelo proxy (Admin SDK, que ignora estas
+// regras), onde os dados são validados: Riot ID, código de convite, ranking.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isMember(squadId) {
+      return signedIn() && request.auth.uid in
+        get(/databases/$(database)/documents/squads/$(squadId)).data.memberUids;
+    }
+
+    // Perfil do usuário no app (Riot ID vinculado, squads): só o dono lê.
+    match /users/{uid} {
+      allow read: if signedIn() && request.auth.uid == uid;
+      allow write: if false;
+    }
+
+    // Squad: só os membros leem. A consulta "meus squads" usa
+    // where('memberUids', arrayContains: uid), que satisfaz esta regra.
+    match /squads/{squadId} {
+      allow read: if signedIn() && request.auth.uid in resource.data.memberUids;
+      allow write: if false;
+
+      // Ranking semanal, escrito pelo proxy.
+      match /rankings/{weekId} {
+        allow read: if isMember(squadId);
+        allow write: if false;
+      }
+    }
+
+    // Todo o resto (retratos semanais de elo, códigos de convite...):
+    // só o proxy acessa.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
