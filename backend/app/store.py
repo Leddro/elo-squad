@@ -23,7 +23,9 @@ class Store(Protocol):
         self, uid: str, display_name: str | None, riot_id: RiotId, puuid: str, profile_icon_url: str | None,
     ) -> None: ...
 
-    async def add_fcm_token(self, uid: str, token: str) -> None: ...
+    async def add_fcm_token(self, uid: str, token: str) -> None:
+        """Liga o token ao usuário e o DESLIGA de qualquer outro (um aparelho, uma conta)."""
+        ...
 
     async def invite_code_exists(self, code: str) -> bool: ...
 
@@ -98,7 +100,18 @@ class FirestoreStore:
     async def add_fcm_token(self, uid: str, token: str) -> None:
         from google.cloud.firestore import ArrayUnion
 
-        await self._user(uid).set({"fcmTokens": ArrayUnion([token])}, merge=True)
+        from google.cloud.firestore import ArrayRemove
+        from google.cloud.firestore_v1.base_query import FieldFilter
+
+        # O aparelho trocou de conta (ex.: o logout não conseguiu avisar o proxy):
+        # tira o token das contas antigas para elas não receberem push aqui.
+        query = self._db.collection(USERS).where(filter=FieldFilter("fcmTokens", "array_contains", token))
+        batch = self._db.batch()  # tudo ou nada
+        async for snap in query.stream():
+            if snap.id != uid:
+                batch.set(snap.reference, {"fcmTokens": ArrayRemove([token])}, merge=True)
+        batch.set(self._user(uid), {"fcmTokens": ArrayUnion([token])}, merge=True)
+        await batch.commit()
 
     async def invite_code_exists(self, code: str) -> bool:
         return (await self._code(code).get()).exists

@@ -3,7 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../../../core/router/app_router.dart';
-import '../../../auth/data/auth_providers.dart';
+import '../../../auth/presentation/sign_out.dart';
 import '../../domain/entities/riot_id.dart';
 
 /// Tela inicial: barra de busca.
@@ -112,6 +112,6 @@ class _SignOutButton extends ConsumerWidget {
     tooltip: 'Sair',
     icon: const Icon(Icons.logout),
     // Depois do logout, o roteador leva ao login sozinho.
-    onPressed: () => ref.read(authRepositoryProvider).signOut(),
+    onPressed: () => ref.read(signOutProvider)(),
   );
 }

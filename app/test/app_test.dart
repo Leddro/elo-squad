@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'helpers/fake_auth_repository.dart';
+import 'helpers/fake_push_service.dart';
 import 'helpers/pump_app.dart';
 
 void main() {
@@ -29,6 +30,20 @@ void main() {
 
     await tester.tap(find.byTooltip('Sair'));
     await pumpFrames(tester);
+    expect(find.text('Entrar com Google'), findsOneWidget);
+  });
+
+  testWidgets('sair desliga o push ANTES de sair da conta', (tester) async {
+    final push = FakePushService();
+    final auth = FakeAuthRepository(signedInAs: testUser);
+    auth.onSignOut = () => push.events.add('signOut');
+    await pumpApp(tester, auth: auth, push: push);
+
+    await tester.tap(find.byTooltip('Sair'));
+    await pumpFrames(tester);
+
+    // Na ordem inversa, o proxy recusaria o pedido (já sem login).
+    expect(push.events, ['unregister', 'signOut']);
     expect(find.text('Entrar com Google'), findsOneWidget);
   });
 

@@ -16,6 +16,12 @@ abstract interface class PushService {
   /// de token. Nunca lança: sem permissão ou sem rede, o app segue sem push.
   Future<void> register();
 
+  /// Chamado ANTES do logout (ainda autenticado): desliga o aparelho da conta
+  /// no proxy e descarta o token local, para a próxima conta ganhar um novo.
+  /// Nunca lança: sem rede, o logout segue (o proxy limpa o token antigo
+  /// quando ele trocar de conta ou deixar de valer).
+  Future<void> unregister();
+
   /// Notificações que chegam com o app ABERTO (o sistema não mostra nada
   /// sozinho nesse caso; o app mostra um aviso).
   Stream<PushMessage> get foreground;
@@ -30,6 +36,7 @@ final class FcmPushService implements PushService {
   final FirebaseMessaging _messaging;
   final Dio _dio;
   StreamSubscription<String>? _tokenRefresh;
+  String? _token; // o último token enviado ao proxy
 
   @override
   Future<void> register() async {
@@ -52,9 +59,38 @@ final class FcmPushService implements PushService {
     }
   }
 
+  @override
+  Future<void> unregister() async {
+    await _tokenRefresh?.cancel();
+    _tokenRefresh = null;
+    final token = _token;
+    _token = null;
+    if (token == null) return; // nunca registrou (sem permissão, por ex.)
+
+    try {
+      await _dio
+          .delete<void>('/me/fcm-tokens/${Uri.encodeComponent(token)}')
+          .timeout(_unregisterTimeout);
+    } on Object catch (error) {
+      debugPrint('Push: não consegui remover o token no proxy ($error)');
+    }
+    try {
+      // O token antigo deixa de valer: mesmo que o proxy não tenha sido
+      // avisado, o envio para ele falha e o proxy o apaga.
+      // Par do getToken (mesmo motivo do ignore lá em cima).
+      // ignore: deprecated_member_use
+      await _messaging.deleteToken().timeout(_unregisterTimeout);
+    } on Object catch (error) {
+      debugPrint('Push: não consegui descartar o token local ($error)');
+    }
+  }
+
+  static const _unregisterTimeout = Duration(seconds: 5);
+
   Future<void> _send(String token) async {
     try {
       await _dio.post<void>('/me/fcm-tokens', data: {'token': token});
+      _token = token;
     } on Object catch (error) {
       debugPrint('Push: não consegui enviar o token ($error)');
     }

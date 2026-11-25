@@ -91,6 +91,11 @@ async def scenario() -> None:
     await store.remove_fcm_tokens("a", ["fcm-1"])
     assert await store.get_fcm_tokens(["a"]) == {}
 
+    # Token que muda de conta sai da conta antiga.
+    await store.add_fcm_token("a", "fcm-x")
+    await store.add_fcm_token("b", "fcm-x")
+    assert await store.get_fcm_tokens(["a", "b"]) == {"b": ["fcm-b", "fcm-x"]}
+
     await store.delete_squad(squad_id, "ABC234")
     assert await store.get_squad(squad_id) is None
     assert not await store.invite_code_exists("ABC234")

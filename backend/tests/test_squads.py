@@ -208,3 +208,27 @@ def test_token_fcm_sem_duplicar(client: TestClient, store: InMemoryStore) -> Non
         r = client.post("/me/fcm-tokens", json={"token": "fcm-1"}, headers=auth("a"))
         assert r.status_code == 204
     assert store.users["a"].fcm_tokens == ["fcm-1"]
+
+
+def test_token_fcm_removido_no_logout(client: TestClient, store: InMemoryStore) -> None:
+    client.post("/me/fcm-tokens", json={"token": "fcm-1"}, headers=auth("a"))
+    client.post("/me/fcm-tokens", json={"token": "fcm-2"}, headers=auth("a"))
+
+    r = client.delete("/me/fcm-tokens/fcm-1", headers=auth("a"))
+
+    assert r.status_code == 204
+    assert store.users["a"].fcm_tokens == ["fcm-2"]
+
+
+def test_remover_token_exige_login(client: TestClient) -> None:
+    r = client.delete("/me/fcm-tokens/fcm-1", headers={"Authorization": ""})
+    assert r.status_code == 401
+
+
+def test_token_fcm_muda_de_conta(client: TestClient, store: InMemoryStore) -> None:
+    # Mesmo aparelho, outra conta: a conta antiga deixa de receber push nele.
+    client.post("/me/fcm-tokens", json={"token": "fcm-1"}, headers=auth("a"))
+    client.post("/me/fcm-tokens", json={"token": "fcm-1"}, headers=auth("b"))
+
+    assert store.users["a"].fcm_tokens == []
+    assert store.users["b"].fcm_tokens == ["fcm-1"]

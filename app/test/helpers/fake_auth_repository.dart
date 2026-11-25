@@ -39,7 +39,13 @@ class FakeAuthRepository implements AuthRepository {
   }
 
   @override
-  Future<void> signOut() async => _set(null);
+  Future<void> signOut() async {
+    onSignOut?.call();
+    _set(null);
+  }
+
+  /// Para o teste saber QUANDO o logout aconteceu.
+  void Function()? onSignOut;
 
   @override
   Future<String?> idToken() async =>

@@ -53,6 +53,9 @@ class SquadService:
     async def add_fcm_token(self, user: AuthUser, token: str) -> None:
         await self._store.add_fcm_token(user.uid, token)
 
+    async def remove_fcm_token(self, user: AuthUser, token: str) -> None:
+        await self._store.remove_fcm_tokens(user.uid, [token])
+
     async def create(self, user: AuthUser, name: str) -> SquadRef:
         member, record = await self._member(user)
         if len(record.squad_ids) >= MAX_SQUADS_PER_USER:

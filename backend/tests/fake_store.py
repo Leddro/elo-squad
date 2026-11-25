@@ -27,6 +27,9 @@ class InMemoryStore:
         user.profile_icon_url = profile_icon_url
 
     async def add_fcm_token(self, uid: str, token: str) -> None:
+        for other_uid, other in self.users.items():
+            if other_uid != uid and token in other.fcm_tokens:
+                other.fcm_tokens.remove(token)
         tokens = self._user(uid).fcm_tokens
         if token not in tokens:
             tokens.append(token)

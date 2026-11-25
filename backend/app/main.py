@@ -194,6 +194,13 @@ async def add_fcm_token(body: FcmTokenRequest, user: CurrentUser, services: Serv
     return Response(status_code=204)
 
 
+@app.delete("/me/fcm-tokens/{token}", status_code=204, responses=_SQUAD_ERRORS)
+async def remove_fcm_token(token: str, user: CurrentUser, services: ServicesDep) -> Response:
+    """Chamada no logout: o aparelho para de receber push desta conta."""
+    await services.squads.remove_fcm_token(user, token)
+    return Response(status_code=204)
+
+
 @app.post("/squads", status_code=201, response_model=SquadRef, responses=_SQUAD_ERRORS)
 async def create_squad(body: CreateSquadRequest, user: CurrentUser, services: ServicesDep) -> SquadRef:
     return await services.squads.create(user, body.name)
