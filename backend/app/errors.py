@@ -19,3 +19,29 @@ class RateLimitedError(RiotError):
 
 class UpstreamError(RiotError):
     """Riot/Data Dragon fora do ar, timeout, chave inválida ou expirada etc."""
+
+
+# ---------- Squads e autenticação (fase 3) ----------
+
+class AppError(Exception):
+    """Base dos erros do próprio app (não da Riot)."""
+
+
+class UnauthenticatedError(AppError):
+    """Sem token do Firebase, ou token inválido/expirado."""
+
+
+class RiotIdRequiredError(AppError):
+    """O usuário ainda não vinculou um Riot ID (exigido para entrar em squads)."""
+
+
+class SquadNotFoundError(AppError):
+    """Código de convite inválido, ou squad do qual o usuário não faz parte."""
+
+
+class SquadFullError(AppError):
+    """O squad já tem o máximo de membros."""
+
+
+class SquadLimitError(AppError):
+    """O usuário já está no máximo de squads."""

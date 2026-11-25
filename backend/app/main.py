@@ -11,17 +11,40 @@ from dataclasses import dataclass
 from typing import Annotated
 
 import httpx
-from fastapi import Depends, FastAPI, Query, Request
+from fastapi import Depends, FastAPI, Query, Request, Response
 from fastapi.responses import JSONResponse
 
+from app.auth import CurrentUser, FirebaseTokenVerifier, get_current_user
 from app.cache import TTLCache
 from app.config import Settings, get_settings
 from app.ddragon import DataDragon
-from app.errors import NotFoundError, RateLimitedError, UpstreamError
+from app.errors import (
+    NotFoundError,
+    RateLimitedError,
+    RiotIdRequiredError,
+    SquadFullError,
+    SquadLimitError,
+    SquadNotFoundError,
+    UnauthenticatedError,
+    UpstreamError,
+)
 from app.match_service import MatchService
-from app.models import ErrorCode, ErrorResponse, MatchPage, SummonerProfile
+from app.models import (
+    CreateSquadRequest,
+    ErrorCode,
+    ErrorResponse,
+    FcmTokenRequest,
+    JoinSquadRequest,
+    LinkRiotIdRequest,
+    LinkRiotIdResponse,
+    MatchPage,
+    SquadRef,
+    SummonerProfile,
+)
 from app.riot_client import RiotClient
 from app.service import SummonerService
+from app.squad_service import SquadService
+from app.store import FirestoreStore, Store
 
 logger = logging.getLogger(__name__)
 
@@ -30,9 +53,12 @@ logger = logging.getLogger(__name__)
 class Services:
     summoner: SummonerService
     matches: MatchService
+    squads: SquadService
 
 
-def build_services(http: httpx.AsyncClient, settings: Settings, cache: TTLCache | None = None) -> Services:
+def build_services(
+    http: httpx.AsyncClient, settings: Settings, store: Store, cache: TTLCache | None = None,
+) -> Services:
     """Monta o grafo de objetos. Os testes chamam isto com um http falso.
 
     Os dois serviços COMPARTILHAM o cliente da Riot, o Data Dragon e o cache: a
@@ -41,10 +67,37 @@ def build_services(http: httpx.AsyncClient, settings: Settings, cache: TTLCache 
     cache = cache or TTLCache()
     riot = RiotClient(http, settings.riot_api_key.get_secret_value(), settings.riot_region, settings.riot_platform)
     ddragon = DataDragon(http, cache, settings.ddragon_language, settings.ttl_ddragon_version_s)
+    summoner = SummonerService(riot, ddragon, cache, settings)
     return Services(
-        summoner=SummonerService(riot, ddragon, cache, settings),
+        summoner=summoner,
         matches=MatchService(riot, ddragon, cache, settings),
+        squads=SquadService(store, summoner),
     )
+
+
+class _UnavailableStore:
+    """Sem credencial do Firestore (ex.: PC sem emulador): o proxy sobe mesmo
+    assim, e só as rotas de squad respondem 503."""
+
+    def __getattr__(self, name: str):  # noqa: ANN204
+        async def unavailable(*_: object, **__: object) -> None:
+            raise UpstreamError("Firestore não configurado (credencial ou emulador)")
+
+        return unavailable
+
+
+def _firebase(settings: Settings) -> tuple[object, Store]:
+    import firebase_admin
+    from firebase_admin import firestore_async
+    from google.auth.exceptions import DefaultCredentialsError
+
+    fb_app = firebase_admin.initialize_app(options={"projectId": settings.firebase_project_id})
+    try:
+        store: Store = FirestoreStore(firestore_async.client(fb_app))
+    except DefaultCredentialsError:
+        logger.warning("Firestore sem credencial: rotas de squad desativadas.")
+        store = _UnavailableStore()  # type: ignore[assignment]
+    return fb_app, store
 
 
 @asynccontextmanager
@@ -52,7 +105,10 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     # Roda UMA vez ao subir o servidor: um único AsyncClient reaproveita conexões
     # (keep-alive) com a Riot em vez de abrir uma nova a cada requisição.
     async with httpx.AsyncClient(timeout=10.0) as http:
-        app.state.services = build_services(http, get_settings())
+        settings = get_settings()
+        fb_app, store = _firebase(settings)
+        app.state.services = build_services(http, settings, store)
+        app.state.token_verifier = FirebaseTokenVerifier(fb_app)
         yield
     # Ao sair do `async with`, as conexões são fechadas (servidor desligando).
 
@@ -69,6 +125,7 @@ def get_services(request: Request) -> Services:
 ServicesDep = Annotated[Services, Depends(get_services)]
 
 _ERROR_RESPONSES = {
+    401: {"model": ErrorResponse, "description": "Sem token do Firebase, ou token inválido"},
     404: {"model": ErrorResponse, "description": "Riot ID não encontrado"},
     429: {"model": ErrorResponse, "description": "Rate limit da Riot (ver Retry-After)"},
     503: {"model": ErrorResponse, "description": "Riot fora do ar ou chave expirada"},
@@ -80,12 +137,17 @@ async def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
-@app.get("/summoner/{game_name}/{tag_line}", response_model=SummonerProfile, responses=_ERROR_RESPONSES)
+# Toda rota que gasta cota da Riot exige login (token do Firebase).
+_AUTH = [Depends(get_current_user)]
+
+
+@app.get("/summoner/{game_name}/{tag_line}", response_model=SummonerProfile, responses=_ERROR_RESPONSES,
+         dependencies=_AUTH)
 async def get_summoner(game_name: str, tag_line: str, services: ServicesDep) -> SummonerProfile:
     return await services.summoner.get_profile(game_name, tag_line)
 
 
-@app.get("/matches/{puuid}", response_model=MatchPage, responses=_ERROR_RESPONSES)
+@app.get("/matches/{puuid}", response_model=MatchPage, responses=_ERROR_RESPONSES, dependencies=_AUTH)
 async def get_matches(
     puuid: str,
     services: ServicesDep,
@@ -95,6 +157,42 @@ async def get_matches(
 ) -> MatchPage:
     # O PUUID vem do perfil (GET /summoner): o app já o tem, então pulamos o account-v1.
     return await services.matches.get_matches(puuid, start, count)
+
+
+# ---------- Usuário e squads (fase 3) ----------
+# O app LÊ squads e usuários direto do Firestore; as ESCRITAS passam por aqui.
+
+_SQUAD_ERRORS = {
+    **_ERROR_RESPONSES,
+    409: {"model": ErrorResponse, "description": "Riot ID não vinculado, squad cheio ou limite de squads"},
+}
+
+
+@app.put("/me/riot-id", response_model=LinkRiotIdResponse, responses=_SQUAD_ERRORS)
+async def link_riot_id(body: LinkRiotIdRequest, user: CurrentUser, services: ServicesDep) -> LinkRiotIdResponse:
+    return await services.squads.link_riot_id(user, body.game_name, body.tag_line)
+
+
+@app.post("/me/fcm-tokens", status_code=204, responses=_SQUAD_ERRORS)
+async def add_fcm_token(body: FcmTokenRequest, user: CurrentUser, services: ServicesDep) -> Response:
+    await services.squads.add_fcm_token(user, body.token)
+    return Response(status_code=204)
+
+
+@app.post("/squads", status_code=201, response_model=SquadRef, responses=_SQUAD_ERRORS)
+async def create_squad(body: CreateSquadRequest, user: CurrentUser, services: ServicesDep) -> SquadRef:
+    return await services.squads.create(user, body.name)
+
+
+@app.post("/squads/join", response_model=SquadRef, responses=_SQUAD_ERRORS)
+async def join_squad(body: JoinSquadRequest, user: CurrentUser, services: ServicesDep) -> SquadRef:
+    return await services.squads.join(user, body.invite_code)
+
+
+@app.post("/squads/{squad_id}/leave", status_code=204, responses=_SQUAD_ERRORS)
+async def leave_squad(squad_id: str, user: CurrentUser, services: ServicesDep) -> Response:
+    await services.squads.leave(user, squad_id)
+    return Response(status_code=204)
 
 
 # ---------- Exceções internas → status HTTP + ErrorResponse ----------
@@ -121,3 +219,28 @@ async def _on_upstream(_: Request, exc: UpstreamError) -> JSONResponse:
     # o cliente não precisa (nem deve) saber detalhes internos.
     logger.error("Falha na Riot: %s", exc)
     return _error(503, "UPSTREAM_UNAVAILABLE", "Serviço da Riot indisponível no momento.")
+
+
+@app.exception_handler(UnauthenticatedError)
+async def _on_unauthenticated(_: Request, exc: UnauthenticatedError) -> JSONResponse:
+    return _error(401, "UNAUTHENTICATED", "Faça login de novo.", headers={"WWW-Authenticate": "Bearer"})
+
+
+@app.exception_handler(RiotIdRequiredError)
+async def _on_riot_id_required(_: Request, exc: RiotIdRequiredError) -> JSONResponse:
+    return _error(409, "RIOT_ID_REQUIRED", "Vincule o seu Riot ID antes de entrar em squads.")
+
+
+@app.exception_handler(SquadNotFoundError)
+async def _on_squad_not_found(_: Request, exc: SquadNotFoundError) -> JSONResponse:
+    return _error(404, "SQUAD_NOT_FOUND", "Squad não encontrado (confira o código de convite).")
+
+
+@app.exception_handler(SquadFullError)
+async def _on_squad_full(_: Request, exc: SquadFullError) -> JSONResponse:
+    return _error(409, "SQUAD_FULL", "Este squad já está cheio.")
+
+
+@app.exception_handler(SquadLimitError)
+async def _on_squad_limit(_: Request, exc: SquadLimitError) -> JSONResponse:
+    return _error(409, "SQUAD_LIMIT", "Você já está no número máximo de squads.")

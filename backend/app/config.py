@@ -16,6 +16,10 @@ class Settings(BaseSettings):
     riot_region: str = "americas"
     riot_platform: str = "br1"
 
+    # Firebase (fase 3). Em produção (Cloud Run) a credencial vem do ambiente;
+    # no PC, rode o emulador e defina FIRESTORE_EMULATOR_HOST=127.0.0.1:8080.
+    firebase_project_id: str = "elo-squad-app"
+
     ddragon_language: str = "pt_BR"
     top_masteries_count: int = 3
 

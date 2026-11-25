@@ -21,7 +21,11 @@ Division = Literal["I", "II", "III", "IV"]
 UnavailableSection = Literal["ranked", "masteries"]
 
 # Códigos de erro estáveis: o app decide o texto a mostrar a partir do código.
-ErrorCode = Literal["SUMMONER_NOT_FOUND", "RATE_LIMITED", "UPSTREAM_UNAVAILABLE"]
+ErrorCode = Literal[
+    "SUMMONER_NOT_FOUND", "RATE_LIMITED", "UPSTREAM_UNAVAILABLE",
+    # Fase 3: login e squads.
+    "UNAUTHENTICATED", "RIOT_ID_REQUIRED", "SQUAD_NOT_FOUND", "SQUAD_FULL", "SQUAD_LIMIT",
+]
 
 
 class CamelModel(BaseModel):
@@ -123,3 +127,66 @@ class ErrorResponse(CamelModel):
     """Corpo de toda resposta de erro (4xx/5xx)."""
     code: ErrorCode
     message: str  # para debug; o texto exibido ao usuário é decidido pelo app
+
+
+# ---------- Squads (fase 3) ----------
+# Estes modelos são também o formato dos documentos no Firestore (camelCase),
+# que o app lê direto.
+
+class SquadMember(CamelModel):
+    """Um membro, copiado (desnormalizado) dentro do squad: a tela do squad
+    mostra todo mundo com UMA leitura, sem buscar cada usuário."""
+    uid: str
+    display_name: str | None
+    riot_id: RiotId
+    puuid: str
+    profile_icon_url: str | None
+
+
+class Squad(CamelModel):
+    """Documento squads/{squadId}."""
+    name: str
+    invite_code: str
+    owner_uid: str
+    member_uids: list[str]  # para a consulta "meus squads" (array-contains) e as regras
+    members: dict[str, SquadMember]  # uid → membro
+    created_at: datetime
+
+
+class UserRecord(CamelModel):
+    """Documento users/{uid}."""
+    display_name: str | None = None
+    riot_id: RiotId | None = None
+    puuid: str | None = None
+    profile_icon_url: str | None = None
+    squad_ids: list[str] = Field(default_factory=list)
+    fcm_tokens: list[str] = Field(default_factory=list)
+
+
+class LinkRiotIdRequest(CamelModel):
+    game_name: str = Field(min_length=3, max_length=16)
+    tag_line: str = Field(min_length=3, max_length=5)
+
+
+class LinkRiotIdResponse(CamelModel):
+    riot_id: RiotId  # com a grafia oficial da Riot
+    puuid: str
+
+
+class CreateSquadRequest(CamelModel):
+    name: str = Field(min_length=1, max_length=30)
+
+
+class JoinSquadRequest(CamelModel):
+    invite_code: str = Field(min_length=4, max_length=12)
+
+
+class SquadRef(CamelModel):
+    """Resposta de criar/entrar: o app abre o squad pelo id (e lê o resto do Firestore)."""
+    id: str
+    invite_code: str
+
+
+class FcmTokenRequest(CamelModel):
+    token: str = Field(min_length=1, max_length=4096)
+

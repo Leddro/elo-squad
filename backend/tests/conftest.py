@@ -13,9 +13,12 @@ import httpx
 import pytest
 from fastapi.testclient import TestClient
 
+from app.auth import AuthUser, get_token_verifier
 from app.cache import TTLCache
 from app.config import Settings
+from app.errors import UnauthenticatedError
 from app.main import app, build_services, get_services
+from fake_store import InMemoryStore
 
 # ---------- Respostas falsas no formato REAL da Riot ----------
 
@@ -129,15 +132,35 @@ def clock() -> FakeClock:
     return FakeClock()
 
 
+def fake_verifier(token: str) -> AuthUser:
+    """Firebase FALSO: o token "token-<uid>" vale para o usuário <uid>."""
+    if not token.startswith("token-"):
+        raise UnauthenticatedError("token inválido")
+    uid = token.removeprefix("token-")
+    return AuthUser(uid=uid, name=f"Nome {uid}")
+
+
+def auth(uid: str) -> dict[str, str]:
+    """Cabeçalho de login para o usuário `uid` (ver fake_verifier)."""
+    return {"Authorization": f"Bearer token-{uid}"}
+
+
 @pytest.fixture
-def client(riot: FakeRiot, clock: FakeClock) -> Iterator[TestClient]:
+def store() -> InMemoryStore:
+    return InMemoryStore()
+
+
+@pytest.fixture
+def client(riot: FakeRiot, clock: FakeClock, store: InMemoryStore) -> Iterator[TestClient]:
     # _env_file=None: o teste NÃO lê o backend/.env (roda igual no CI, sem chave).
     settings = Settings(riot_api_key="chave-de-teste", _env_file=None)  # type: ignore[call-arg]
     http = httpx.AsyncClient(transport=httpx.MockTransport(riot))
-    services = build_services(http, settings, cache=TTLCache(clock=clock))
+    services = build_services(http, settings, store, cache=TTLCache(clock=clock))
 
     # Mesma ideia do ProviderScope(overrides: [...]) do Riverpod:
-    # trocamos a dependência real por uma montada com a Riot falsa.
+    # trocamos as dependências reais (Riot, Firestore, Firebase Auth) por falsas.
     app.dependency_overrides[get_services] = lambda: services
-    yield TestClient(app)
+    app.dependency_overrides[get_token_verifier] = lambda: fake_verifier
+    # Por padrão, toda requisição vai logada como "uid-1".
+    yield TestClient(app, headers=auth("uid-1"))
     app.dependency_overrides.clear()
