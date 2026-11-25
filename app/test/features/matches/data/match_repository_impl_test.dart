@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:drift/native.dart';
 import 'package:elo_squad/core/database/app_database.dart';
@@ -33,6 +35,17 @@ void main() {
   });
 
   tearDown(() => db.close());
+
+  /// Uma página com os [ids] pedidos (o resto dos campos vem da fixture).
+  Map<String, dynamic> pageJson(List<String> ids, int? nextStart) {
+    final json = loadFixture('match_page.json');
+    final template = (json['matches'] as List).first as Map<String, dynamic>;
+    return json
+      ..['matches'] = [
+        for (final id in ids) {...template, 'matchId': id},
+      ]
+      ..['nextStart'] = nextStart;
+  }
 
   /// Responde com a fixture (3 partidas); [nextStart] controla se há mais.
   void respondWithPage({int? nextStart = 3}) => adapter.respond = (_) =>
@@ -106,6 +119,33 @@ void main() {
       repository.refresh(fulano),
       throwsA(isA<RateLimitedFailure>()),
     );
+  });
+
+  test('loadMore durante um refresh espera o refresh (sem corrida)', () async {
+    // Cache com 6 partidas, em duas páginas de 3.
+    adapter.respond = (_) => jsonResponse(pageJson(['A6', 'A5', 'A4'], 3));
+    await repository.refresh(fulano);
+    adapter.respond = (_) => jsonResponse(pageJson(['A3', 'A2', 'A1'], 6));
+    await repository.loadMore(fulano);
+
+    // Refresh LENTO e sem partida em comum: vai descartar as 6 e ficar com 3.
+    final slowFirstPage = Completer<ResponseBody>();
+    adapter.respond = (options) {
+      if (options.uri.queryParameters['start'] == '0') {
+        return slowFirstPage.future;
+      }
+      return jsonResponse(pageJson(['N4', 'N3', 'N2'], 6));
+    };
+
+    final refreshing = repository.refresh(fulano);
+    final loading = repository.loadMore(fulano); // começa ANTES do refresh
+    slowFirstPage.complete(jsonResponse(pageJson(['N7', 'N6', 'N5'], 3)));
+    await Future.wait([refreshing, loading]);
+
+    // Sem a fila, o loadMore teria lido a contagem velha (6) e pedido
+    // start=6, gravando a página depois de um buraco.
+    expect(adapter.requests.last.uri.queryParameters['start'], '3');
+    expect((await repository.watchHistory(fulano).first).matches, hasLength(6));
   });
 
   test('JSON fora do contrato → UnexpectedFailure, e nada é gravado', () async {

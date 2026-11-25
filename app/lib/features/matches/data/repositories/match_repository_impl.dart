@@ -28,7 +28,7 @@ final class MatchRepositoryImpl implements MatchRepository {
       );
 
   @override
-  Future<void> refresh(String puuid) => guardFailures(() async {
+  Future<void> refresh(String puuid) => _oneAtATime(() async {
     final page = await _remote.fetchPage(puuid, start: 0);
     await _local.saveFirstPage(
       puuid,
@@ -39,7 +39,7 @@ final class MatchRepositoryImpl implements MatchRepository {
   });
 
   @override
-  Future<void> loadMore(String puuid) => guardFailures(() async {
+  Future<void> loadMore(String puuid) => _oneAtATime(() async {
     final start = await _local.nextStart(puuid);
     if (start == null) return; // acabou, ou ainda não houve refresh
 
@@ -48,4 +48,21 @@ final class MatchRepositoryImpl implements MatchRepository {
       for (final dto in page.matches) dto.toEntity(),
     ], reachedEnd: page.nextStart == null);
   });
+
+  /// Fim da fila de escritas: cada operação nova espera a anterior acabar.
+  Future<void> _queue = Future.value();
+
+  /// EXCLUSÃO MÚTUA (mutex): uma escrita por vez.
+  ///
+  /// Evita uma CONDIÇÃO DE CORRIDA. Sem a fila, um loadMore que começa
+  /// durante um refresh lê o `nextStart` ANTES do refresh descartar as
+  /// partidas antigas, e grava a página depois do buraco, quebrando a
+  /// invariante do bloco contínuo. Com a fila, ele só lê o `nextStart`
+  /// depois que o refresh terminou.
+  Future<void> _oneAtATime(Future<void> Function() body) {
+    final result = _queue.then((_) => guardFailures(body));
+    // Uma operação que falhou não pode travar a fila para sempre.
+    _queue = result.then((_) {}, onError: (_) {});
+    return result;
+  }
 }
