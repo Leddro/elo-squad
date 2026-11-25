@@ -1,9 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../../../core/presentation/failure_messages.dart';
 import '../../../../core/presentation/formatters.dart';
 import '../../domain/entities/match_history.dart';
-import '../match_formatters.dart';
 import '../providers/match_history_providers.dart';
 import 'match_tile.dart';
 
@@ -36,7 +36,7 @@ class MatchHistorySliver extends ConsumerWidget {
           AsyncValue(:final error?) => [
             SliverToBoxAdapter(
               child: _ErrorCard(
-                message: matchFailureMessage(error),
+                message: shortFailureMessage(error),
                 onRetry: () => ref.invalidate(matchHistoryProvider(puuid)),
               ),
             ),
@@ -62,7 +62,7 @@ class MatchHistorySliver extends ConsumerWidget {
           child: refreshError == null
               ? const MatchListSkeleton()
               : _ErrorCard(
-                  message: matchFailureMessage(refreshError),
+                  message: shortFailureMessage(refreshError),
                   onRetry: () => ref.invalidate(matchRefreshProvider(puuid)),
                 ),
         ),
@@ -75,7 +75,7 @@ class MatchHistorySliver extends ConsumerWidget {
       if (refreshError != null)
         SliverToBoxAdapter(
           child: _StaleNotice(
-            message: matchFailureMessage(refreshError),
+            message: shortFailureMessage(refreshError),
             savedAt: history.refreshedAt!,
           ),
         ),
@@ -139,7 +139,7 @@ class _ListFooter extends StatelessWidget {
         padding: const EdgeInsets.all(8),
         child: Column(
           children: [
-            Text(matchFailureMessage(error), textAlign: TextAlign.center),
+            Text(shortFailureMessage(error), textAlign: TextAlign.center),
             TextButton.icon(
               onPressed: onLoadMore,
               icon: const Icon(Icons.refresh),

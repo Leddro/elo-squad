@@ -54,6 +54,11 @@ final class RiotId {
   int get hashCode =>
       Object.hash(gameName.toLowerCase(), tagLine.toLowerCase());
 
+  /// Chave para guardar no banco local: `fulano#br1`. Segue a MESMA regra
+  /// do `==` (minúsculas), então buscar "Fulano#BR1" acha o que foi salvo
+  /// como "fulano#br1".
+  String get storageKey => '${gameName.toLowerCase()}#${tagLine.toLowerCase()}';
+
   /// Mantém a grafia original para exibição: `Fulano#BR1`.
   @override
   String toString() => '$gameName#$tagLine';

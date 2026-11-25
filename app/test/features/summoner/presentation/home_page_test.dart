@@ -1,5 +1,6 @@
 import 'package:elo_squad/features/matches/data/match_data_providers.dart';
 import 'package:elo_squad/features/summoner/data/summoner_data_providers.dart';
+import 'package:elo_squad/features/summoner/domain/entities/profile_result.dart';
 import 'package:elo_squad/features/summoner/domain/repositories/summoner_repository.dart';
 import 'package:elo_squad/features/summoner/presentation/pages/home_page.dart';
 import 'package:elo_squad/features/summoner/presentation/pages/profile_page.dart';
@@ -23,7 +24,7 @@ void main() {
   setUp(() {
     repository = MockSummonerRepository();
     when(() => repository.getProfile(fulano))
-        .thenAnswer((_) async => makeProfile());
+        .thenAnswer((_) async => ProfileResult(profile: makeProfile()));
   });
 
   Future<void> pumpHome(WidgetTester tester) => tester.pumpWidget(

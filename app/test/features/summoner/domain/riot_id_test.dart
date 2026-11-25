@@ -85,4 +85,12 @@ void main() {
   test('toString usa o formato nome#tag com a grafia original', () {
     expect(const RiotId('Fulano', 'BR1').toString(), 'Fulano#BR1');
   });
+
+  test('storageKey: minúsculas, igual para "Fulano#BR1" e "fulano#br1"', () {
+    expect(const RiotId('Fulano', 'BR1').storageKey, 'fulano#br1');
+    expect(
+      const RiotId('fulano', 'br1').storageKey,
+      const RiotId('FULANO', 'Br1').storageKey,
+    );
+  });
 }

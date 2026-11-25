@@ -1,8 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/summoner_data_providers.dart';
+import '../../domain/entities/profile_result.dart';
 import '../../domain/entities/riot_id.dart';
-import '../../domain/entities/summoner_profile.dart';
 import '../../domain/usecases/get_summoner_profile.dart';
 
 /// O caso de uso, montado com o repositório.
@@ -21,7 +21,7 @@ final getSummonerProfileProvider = Provider<GetSummonerProfile>(
 ///   novo, e repetir um 429 só piora o rate limit. Quem decide tentar de novo
 ///   é o usuário, pelo botão da tela de erro.
 final summonerProfileProvider = FutureProvider.autoDispose
-    .family<SummonerProfile, RiotId>(
+    .family<ProfileResult, RiotId>(
       (ref, riotId) => ref.watch(getSummonerProfileProvider)(riotId),
       retry: (retryCount, error) => null,
     );

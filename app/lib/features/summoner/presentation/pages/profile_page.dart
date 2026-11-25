@@ -1,6 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/presentation/failure_messages.dart';
 import '../../../matches/presentation/providers/match_history_providers.dart';
 import '../../../matches/presentation/widgets/match_history_sliver.dart';
 import '../../domain/entities/riot_id.dart';
@@ -45,7 +46,7 @@ class ProfilePage extends ConsumerWidget {
         // 1. Tem perfil (inclusive durante o puxar-para-atualizar): mostra.
         AsyncValue(:final value?) => RefreshIndicator(
           onRefresh: () async {
-            final matches = matchRefreshProvider(value.puuid);
+            final matches = matchRefreshProvider(value.profile.puuid);
             // invalidate: descarta o estado atual e manda buscar de novo.
             ref.invalidate(provider);
             ref.invalidate(matches);
@@ -64,13 +65,23 @@ class ProfilePage extends ConsumerWidget {
           child: CustomScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
             slivers: [
+              // Veio do cache porque a busca falhou: avisa no topo.
+              if (value.staleBecause case final failure?)
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                  sliver: SliverToBoxAdapter(
+                    child: _StaleProfileNotice(failure: failure),
+                  ),
+                ),
               SliverPadding(
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-                sliver: SliverToBoxAdapter(child: ProfileView(profile: value)),
+                sliver: SliverToBoxAdapter(
+                  child: ProfileView(profile: value.profile),
+                ),
               ),
               SliverPadding(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                sliver: MatchHistorySliver(puuid: value.puuid),
+                sliver: MatchHistorySliver(puuid: value.profile.puuid),
               ),
             ],
           ),
@@ -86,4 +97,23 @@ class ProfilePage extends ConsumerWidget {
       },
     );
   }
+}
+
+/// "Sem conexão: mostrando o perfil salvo". O "Atualizado há X" do cabeçalho
+/// diz de quando é a cópia.
+class _StaleProfileNotice extends StatelessWidget {
+  const _StaleProfileNotice({required this.failure});
+
+  final Object failure;
+
+  @override
+  Widget build(BuildContext context) => Card(
+    child: ListTile(
+      leading: const Icon(Icons.cloud_off),
+      title: Text(shortFailureMessage(failure)),
+      subtitle: const Text(
+        'Mostrando o perfil salvo. Puxe a tela para tentar de novo.',
+      ),
+    ),
+  );
 }

@@ -1,4 +1,3 @@
-import '../../../core/error/failure.dart';
 import '../domain/entities/match_summary.dart';
 
 // Textos de exibição do histórico (decisão da presentation, não do domain).
@@ -39,19 +38,4 @@ String formatDuration(Duration duration) {
   return duration.inHours > 0
       ? '${duration.inHours}:${twoDigits(minutes)}:$seconds'
       : '$minutes:$seconds';
-}
-
-/// Mensagem curta para um erro dentro da seção de partidas (a tela de erro
-/// grande do perfil não cabe aqui).
-String matchFailureMessage(Object error) {
-  final failure = error is Failure ? error : UnexpectedFailure(error);
-  // Exaustivo e sem curinga, como na FailureView.
-  return switch (failure) {
-    NetworkFailure() => 'Sem conexão. Verifique sua internet.',
-    RateLimitedFailure(:final retryAfter) =>
-      'Muitas requisições. Aguarde ${retryAfter.inSeconds}s.',
-    UpstreamUnavailableFailure() => 'Os servidores da Riot não responderam.',
-    NotFoundFailure() => 'Histórico não encontrado.',
-    UnexpectedFailure() => 'Algo deu errado ao buscar as partidas.',
-  };
 }

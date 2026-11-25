@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:elo_squad/core/error/failure.dart';
 import 'package:elo_squad/features/matches/data/match_data_providers.dart';
 import 'package:elo_squad/features/summoner/data/summoner_data_providers.dart';
+import 'package:elo_squad/features/summoner/domain/entities/profile_result.dart';
 import 'package:elo_squad/features/summoner/domain/entities/summoner_profile.dart';
 import 'package:elo_squad/features/summoner/domain/repositories/summoner_repository.dart';
 import 'package:elo_squad/features/summoner/presentation/pages/profile_page.dart';
@@ -36,14 +37,18 @@ void main() {
     );
   }
 
-  void answer(Future<SummonerProfile> Function() result) =>
+  void answer(Future<ProfileResult> Function() result) =>
       when(() => repository.getProfile(fulano)).thenAnswer((_) => result());
+
+  /// Atalho: a busca deu certo e devolveu este perfil, atualizado.
+  Future<ProfileResult> fresh(SummonerProfile profile) async =>
+      ProfileResult(profile: profile);
 
   // Obs.: o skeleton pulsa para sempre, então não usamos pumpAndSettle()
   // (ele espera as animações acabarem e nunca terminaria). pump() avança um frame.
 
   testWidgets('enquanto carrega, mostra o skeleton', (tester) async {
-    answer(() => Completer<SummonerProfile>().future); // nunca completa
+    answer(() => Completer<ProfileResult>().future); // nunca completa
 
     await pumpProfilePage(tester);
     await tester.pump();
@@ -52,7 +57,7 @@ void main() {
   });
 
   testWidgets('sucesso: mostra elo, PDL e maestrias', (tester) async {
-    answer(() async => makeProfile());
+    answer(() => fresh(makeProfile()));
 
     await pumpProfilePage(tester);
     await tester.pump();
@@ -69,7 +74,7 @@ void main() {
   testWidgets('resposta parcial: só a seção que faltou mostra aviso', (
     tester,
   ) async {
-    answer(() async => makeProfile(ranked: null));
+    answer(() => fresh(makeProfile(ranked: null)));
 
     await pumpProfilePage(tester);
     await tester.pump();
@@ -89,6 +94,27 @@ void main() {
     expect(find.text('Não encontramos esse jogador'), findsOneWidget);
     expect(find.text('Buscar outro jogador'), findsOneWidget);
     expect(find.text('Tentar de novo'), findsNothing);
+  });
+
+  testWidgets('sem conexão, mas com perfil salvo: mostra o perfil e avisa', (
+    tester,
+  ) async {
+    answer(
+      () async => ProfileResult(
+        profile: makeProfile(),
+        staleBecause: const NetworkFailure(),
+      ),
+    );
+
+    await pumpProfilePage(tester);
+    await tester.pump();
+
+    expect(find.text('Ouro II'), findsOneWidget); // o perfil salvo
+    expect(
+      find.text('Mostrando o perfil salvo. Puxe a tela para tentar de novo.'),
+      findsOneWidget,
+    );
+    expect(find.text('Sem conexão'), findsNothing); // nada de tela de erro
   });
 
   testWidgets('rate limit: mostra quanto tempo esperar', (tester) async {
@@ -125,7 +151,7 @@ void main() {
     expect(find.text('Sem conexão'), findsOneWidget);
 
     // Na segunda tentativa, a rede voltou.
-    answer(() async => makeProfile());
+    answer(() => fresh(makeProfile()));
     await tester.tap(find.text('Tentar de novo'));
     await tester.pump(); // reconstrói com isLoading: true → skeleton
     await tester.pump(); // a busca completa → perfil

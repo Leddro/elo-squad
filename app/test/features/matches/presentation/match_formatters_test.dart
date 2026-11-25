@@ -1,4 +1,3 @@
-import 'package:elo_squad/core/error/failure.dart';
 import 'package:elo_squad/features/matches/presentation/match_formatters.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -20,17 +19,5 @@ void main() {
     expect(formatDuration(const Duration(seconds: 1834)), '30:34');
     expect(formatDuration(const Duration(minutes: 3, seconds: 5)), '3:05');
     expect(formatDuration(const Duration(hours: 1, seconds: 125)), '1:02:05');
-  });
-
-  test('matchFailureMessage: uma mensagem por Failure', () {
-    expect(matchFailureMessage(const NetworkFailure()), contains('conexão'));
-    expect(
-      matchFailureMessage(
-        const RateLimitedFailure(retryAfter: Duration(seconds: 7)),
-      ),
-      contains('7s'),
-    );
-    // Algo que não é Failure (um bug) também tem mensagem.
-    expect(matchFailureMessage(StateError('bug')), contains('Algo deu errado'));
   });
 }

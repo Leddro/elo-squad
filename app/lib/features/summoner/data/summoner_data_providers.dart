@@ -1,8 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/database/database_provider.dart';
 import '../../../core/network/dio_provider.dart';
 import '../domain/repositories/summoner_repository.dart';
 import 'datasources/summoner_remote_data_source.dart';
+import 'local/profile_local_data_source.dart';
 import 'repositories/summoner_repository_impl.dart';
 
 // Injeção de dependência da camada data, feita com providers.
@@ -16,6 +18,13 @@ final summonerRemoteDataSourceProvider = Provider<SummonerRemoteDataSource>(
   (ref) => SummonerRemoteDataSource(ref.watch(dioProvider)),
 );
 
+final profileLocalDataSourceProvider = Provider<ProfileLocalDataSource>(
+  (ref) => ProfileLocalDataSource(ref.watch(appDatabaseProvider)),
+);
+
 final summonerRepositoryProvider = Provider<SummonerRepository>(
-  (ref) => SummonerRepositoryImpl(ref.watch(summonerRemoteDataSourceProvider)),
+  (ref) => SummonerRepositoryImpl(
+    ref.watch(summonerRemoteDataSourceProvider),
+    ref.watch(profileLocalDataSourceProvider),
+  ),
 );

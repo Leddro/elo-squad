@@ -1,4 +1,5 @@
 import 'package:elo_squad/core/error/failure.dart';
+import 'package:elo_squad/features/summoner/domain/entities/profile_result.dart';
 import 'package:elo_squad/features/summoner/domain/entities/riot_id.dart';
 import 'package:elo_squad/features/summoner/domain/entities/summoner_profile.dart';
 import 'package:elo_squad/features/summoner/domain/repositories/summoner_repository.dart';
@@ -15,14 +16,16 @@ void main() {
   late GetSummonerProfile getSummonerProfile;
 
   const riotId = RiotId('Fulano', 'BR1');
-  final profile = SummonerProfile(
-    riotId: riotId,
-    puuid: 'puuid-123',
-    level: 347,
-    profileIconUrl: null,
-    ranked: null,
-    topMasteries: const [],
-    fetchedAt: DateTime.utc(2026, 11, 24, 14, 3),
+  final profile = ProfileResult(
+    profile: SummonerProfile(
+      riotId: riotId,
+      puuid: 'puuid-123',
+      level: 347,
+      profileIconUrl: null,
+      ranked: null,
+      topMasteries: const [],
+      fetchedAt: DateTime.utc(2026, 11, 24, 14, 3),
+    ),
   );
 
   // setUp roda antes de CADA teste: cada um começa com um mock limpo.

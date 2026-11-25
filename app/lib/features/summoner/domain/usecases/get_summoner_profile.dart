@@ -1,5 +1,5 @@
+import '../entities/profile_result.dart';
 import '../entities/riot_id.dart';
-import '../entities/summoner_profile.dart';
 import '../repositories/summoner_repository.dart';
 
 /// Caso de uso: "buscar o perfil de um jogador".
@@ -16,5 +16,5 @@ final class GetSummonerProfile {
 
   final SummonerRepository _repository;
 
-  Future<SummonerProfile> call(RiotId riotId) => _repository.getProfile(riotId);
+  Future<ProfileResult> call(RiotId riotId) => _repository.getProfile(riotId);
 }
