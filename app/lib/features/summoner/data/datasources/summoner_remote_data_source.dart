@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 
+import '../../../../core/network/json.dart';
 import '../../domain/entities/riot_id.dart';
 import '../models/summoner_profile_dto.dart';
 

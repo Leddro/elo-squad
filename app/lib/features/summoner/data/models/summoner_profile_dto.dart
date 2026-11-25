@@ -1,5 +1,6 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 
+import '../../../../core/network/json.dart';
 import '../../domain/entities/mastery.dart';
 import '../../domain/entities/ranked.dart';
 import '../../domain/entities/riot_id.dart';
@@ -18,7 +19,7 @@ part 'summoner_profile_dto.g.dart';
 // campos. Se o JSON vier diferente do esperado, o código gerado lança
 // TypeError, e o repositório transforma isso em Failure.
 
-typedef Json = Map<String, dynamic>;
+// `Json` (Map<String, dynamic>) fica em core/network/json.dart.
 
 @freezed
 abstract class SummonerProfileDto with _$SummonerProfileDto {
