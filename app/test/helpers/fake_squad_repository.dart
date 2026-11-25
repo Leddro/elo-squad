@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:elo_squad/features/squads/domain/entities/squad.dart';
+import 'package:elo_squad/features/squads/domain/entities/weekly_ranking.dart';
 import 'package:elo_squad/features/squads/domain/repositories/squad_repository.dart';
 import 'package:elo_squad/features/summoner/domain/entities/riot_id.dart';
 
@@ -21,6 +22,9 @@ class FakeSquadRepository implements SquadRepository {
   Future<String> Function(String code) onJoin = (_) async => 'novo-id';
   Future<RiotId> Function(RiotId riotId) onLink = (id) async => id;
   final leftSquads = <String>[];
+
+  /// Ranking mais recente de cada squad (por id).
+  final rankings = <String, WeeklyRanking>{};
 
   void setAccount(AccountLink account) {
     _account = account;
@@ -51,6 +55,10 @@ class FakeSquadRepository implements SquadRepository {
     yield find(_squads);
     yield* _squadChanges.stream.map(find);
   }
+
+  @override
+  Stream<WeeklyRanking?> watchLatestRanking(String squadId) =>
+      Stream.value(rankings[squadId]);
 
   @override
   Future<RiotId> linkRiotId(RiotId riotId) => onLink(riotId);

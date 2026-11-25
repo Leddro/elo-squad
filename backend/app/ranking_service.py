@@ -100,7 +100,7 @@ class RankingService:
                 entries=build_entries(squad, starts, current),
             )
             await self._store.save_ranking(squad_id, ranking)
-            await self._notify_promotions(squad, previous, ranking)
+            await self._notify_promotions(squad_id, squad, previous, ranking)
         return len(squads)
 
     async def close_week(self) -> int:
@@ -184,7 +184,9 @@ class RankingService:
 
     # ---------- Notificações ----------
 
-    async def _notify_promotions(self, squad: Squad, previous: WeeklyRanking | None, ranking: WeeklyRanking) -> None:
+    async def _notify_promotions(
+        self, squad_id: str, squad: Squad, previous: WeeklyRanking | None, ranking: WeeklyRanking,
+    ) -> None:
         if previous is None:
             return  # primeira atualização da semana: não há com o que comparar
         before = {e.uid: e.current for e in previous.entries}
@@ -197,7 +199,7 @@ class RankingService:
                     title=f"{entry.riot_id.game_name} subiu de elo!",
                     body=f"{entry.riot_id.game_name}#{entry.riot_id.tag_line} agora é "
                          f"{rank_label(entry.current)} ({squad.name}).",
-                    data={"type": "promotion", "uid": entry.uid},
+                    data={"type": "promotion", "uid": entry.uid, "squadId": squad_id},
                 )
 
     async def _notify_winner(self, squad_id: str, squad: Squad, ranking: WeeklyRanking) -> None:

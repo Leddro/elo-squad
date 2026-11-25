@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../models/ranking_dtos.dart';
 import '../models/squad_dtos.dart';
 
 /// Leituras em tempo real do Firestore. As regras de segurança garantem que
@@ -33,4 +34,17 @@ final class SquadFirestoreDataSource {
         final data = snap.data();
         return data == null ? null : SquadDocDto.fromJson(data);
       });
+
+  Stream<WeeklyRankingDto?> watchLatestRanking(String squadId) => _db
+      .collection('squads')
+      .doc(squadId)
+      .collection('rankings')
+      .orderBy('weekStart', descending: true)
+      .limit(1)
+      .snapshots()
+      .map(
+        (query) => query.docs.isEmpty
+            ? null
+            : WeeklyRankingDto.fromJson(query.docs.first.data()),
+      );
 }

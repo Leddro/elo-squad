@@ -6,6 +6,7 @@ import '../../../../core/error/failure.dart';
 import '../../../../core/error/guard_failures.dart';
 import '../../../summoner/domain/entities/riot_id.dart';
 import '../../domain/entities/squad.dart';
+import '../../domain/entities/weekly_ranking.dart';
 import '../../domain/repositories/squad_repository.dart';
 import '../datasources/squad_firestore_data_source.dart';
 import '../datasources/squad_remote_data_source.dart';
@@ -36,6 +37,12 @@ final class SquadRepositoryImpl implements SquadRepository {
   Stream<Squad?> watchSquad(String squadId) => _firestore
       .watchSquad(squadId)
       .map((dto) => dto?.toEntity(squadId))
+      .transform(_toFailures(permissionDeniedAsNull: true));
+
+  @override
+  Stream<WeeklyRanking?> watchLatestRanking(String squadId) => _firestore
+      .watchLatestRanking(squadId)
+      .map((dto) => dto?.toEntity())
       .transform(_toFailures(permissionDeniedAsNull: true));
 
   @override

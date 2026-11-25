@@ -169,6 +169,7 @@ def test_ao_longo_da_semana_soma_o_pdl_e_avisa_a_promocao(
     [promotion] = notifier.sent
     assert promotion["uids"] == ["b"]  # avisa os OUTROS
     assert promotion["body"] == "a#BR1 agora é Ouro I (Os Brabos)."
+    assert promotion["data"]["squadId"] == "s1"  # tocar abre o squad
 
 
 def test_riot_falhou_para_um_jogador_mantem_o_elo_anterior(

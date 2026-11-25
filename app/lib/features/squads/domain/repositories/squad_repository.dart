@@ -1,5 +1,6 @@
 import '../../../summoner/domain/entities/riot_id.dart';
 import '../entities/squad.dart';
+import '../entities/weekly_ranking.dart';
 
 /// Squads: LEITURAS em tempo real do Firestore (Streams, que funcionam offline
 /// com o cache do próprio Firestore) e ESCRITAS pelo proxy, que valida tudo.
@@ -15,6 +16,10 @@ abstract interface class SquadRepository {
 
   /// Um squad. Emite null se ele não existe mais ou se o usuário saiu dele.
   Stream<Squad?> watchSquad(String squadId);
+
+  /// O ranking mais recente do squad (a semana atual, ou o resultado final da
+  /// anterior até a primeira atualização da semana nova). null = ainda não há.
+  Stream<WeeklyRanking?> watchLatestRanking(String squadId);
 
   /// Valida o Riot ID na Riot e vincula à conta. Devolve a grafia oficial.
   Future<RiotId> linkRiotId(RiotId riotId);

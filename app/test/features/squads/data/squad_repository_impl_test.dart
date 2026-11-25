@@ -94,6 +94,51 @@ void main() {
       expect(squad.isOwner('c'), isTrue);
     });
 
+    test('ranking mais recente: Timestamp e o campo `final`', () async {
+      final rankings = db.collection('squads').doc('s1').collection('rankings');
+      Map<String, dynamic> doc(String week, DateTime start, bool isFinal) => {
+        'weekId': week,
+        'weekStart': start, // o fake guarda como Timestamp, igual ao real
+        'updatedAt': start.add(const Duration(days: 1)),
+        'final': isFinal,
+        'entries': [
+          {
+            'uid': 'a',
+            'displayName': null,
+            'riotId': {'gameName': 'Fulano', 'tagLine': 'BR1'},
+            'profileIconUrl': null,
+            'current': {
+              'tier': 'GOLD',
+              'division': 'I',
+              'lp': 10,
+              'wins': 13,
+              'losses': 10,
+            },
+            'lpDelta': 56,
+            'games': 3,
+          },
+        ],
+      };
+      await rankings
+          .doc('2026-W47')
+          .set(doc('2026-W47', DateTime.utc(2026, 11, 16, 3), true));
+      await rankings
+          .doc('2026-W48')
+          .set(doc('2026-W48', DateTime.utc(2026, 11, 23, 3), false));
+
+      final ranking = (await repository.watchLatestRanking('s1').first)!;
+
+      expect(ranking.weekId, '2026-W48'); // a semana mais nova
+      expect(ranking.isFinal, isFalse);
+      expect(ranking.weekStart, DateTime.utc(2026, 11, 23, 3));
+      expect(ranking.entries.single.lpDelta, 56);
+      expect(ranking.entries.single.current!.lp, 10);
+    });
+
+    test('sem ranking ainda: null', () async {
+      expect(await repository.watchLatestRanking('s1').first, isNull);
+    });
+
     test('squad apagado: null', () async {
       expect(await repository.watchSquad('nao-existe').first, isNull);
     });

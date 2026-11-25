@@ -1,6 +1,7 @@
 import 'package:elo_squad/app.dart';
 import 'package:elo_squad/features/auth/data/auth_providers.dart';
 import 'package:elo_squad/features/matches/data/match_data_providers.dart';
+import 'package:elo_squad/features/notifications/push_service.dart';
 import 'package:elo_squad/features/squads/data/squad_data_providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -8,6 +9,7 @@ import 'package:flutter_riverpod/misc.dart' show Override;
 
 import 'fake_auth_repository.dart';
 import 'fake_match_repository.dart';
+import 'fake_push_service.dart';
 import 'fake_squad_repository.dart';
 
 /// Sobe o APP INTEIRO (roteador incluído) com Firebase, banco e partidas
@@ -16,6 +18,7 @@ Future<void> pumpApp(
   WidgetTester tester, {
   FakeAuthRepository? auth,
   FakeSquadRepository? squads,
+  FakePushService? push,
   List<Override> overrides = const [],
 }) async {
   await tester.pumpWidget(
@@ -25,6 +28,7 @@ Future<void> pumpApp(
           auth ?? FakeAuthRepository(signedInAs: testUser),
         ),
         matchRepositoryProvider.overrideWithValue(FakeMatchRepository()),
+        pushServiceProvider.overrideWithValue(push ?? FakePushService()),
         squadRepositoryProvider.overrideWithValue(
           squads ?? FakeSquadRepository(),
         ),

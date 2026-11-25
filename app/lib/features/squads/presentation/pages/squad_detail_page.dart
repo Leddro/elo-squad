@@ -10,6 +10,7 @@ import '../../../../core/router/app_router.dart';
 import '../../data/squad_data_providers.dart';
 import '../../domain/entities/squad.dart';
 import '../providers/squad_providers.dart';
+import '../widgets/ranking_section.dart';
 
 /// Um squad: o código de convite e os membros.
 class SquadDetailPage extends ConsumerWidget {
@@ -93,6 +94,8 @@ class _SquadView extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
+        RankingSection(squadId: squad.id, uid: uid),
+        const SizedBox(height: 24),
         _InviteCard(code: squad.inviteCode),
         const SizedBox(height: 24),
         Text('Membros (${squad.members.length})', style: text.titleMedium),
