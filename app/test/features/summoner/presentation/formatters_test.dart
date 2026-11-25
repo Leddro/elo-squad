@@ -1,3 +1,4 @@
+import 'package:elo_squad/core/presentation/formatters.dart';
 import 'package:elo_squad/features/summoner/domain/entities/ranked.dart';
 import 'package:elo_squad/features/summoner/domain/entities/tier.dart';
 import 'package:elo_squad/features/summoner/presentation/formatters.dart';
@@ -31,9 +32,9 @@ void main() {
     expect(formatWinRate(null), '—');
   });
 
-  group('formatUpdatedAgo', () {
+  group('formatTimeAgo', () {
     final now = DateTime(2026, 11, 24, 15);
-    String ago(Duration d) => formatUpdatedAgo(now.subtract(d), now: now);
+    String ago(Duration d) => formatTimeAgo(now.subtract(d), now: now);
 
     test(
       'menos de 1 minuto',

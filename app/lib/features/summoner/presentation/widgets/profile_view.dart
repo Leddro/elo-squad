@@ -1,14 +1,18 @@
 import 'package:material_ui/material_ui.dart';
 
+import '../../../../core/presentation/formatters.dart';
+import '../../../../core/presentation/widgets/network_avatar.dart';
 import '../../domain/entities/mastery.dart';
 import '../../domain/entities/ranked.dart';
 import '../../domain/entities/summoner_profile.dart';
 import '../formatters.dart';
-import 'network_avatar.dart';
 
 /// O perfil carregado. Recebe a ENTIDADE pronta: não sabe nada de Riverpod,
 /// Dio ou carregamento. Widgets assim ("burros", só exibem) são fáceis de
 /// reaproveitar e de testar.
+///
+/// Não rola sozinho: é um pedaço da rolagem da ProfilePage, junto com o
+/// histórico de partidas.
 class ProfileView extends StatelessWidget {
   const ProfileView({super.key, required this.profile});
 
@@ -16,11 +20,8 @@ class ProfileView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // AlwaysScrollable: o "puxar para atualizar" precisa de uma lista rolável,
-    // mesmo quando o conteúdo cabe inteiro na tela.
-    return ListView(
-      physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.all(16),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _Header(profile: profile),
         const SizedBox(height: 24),
@@ -53,7 +54,7 @@ class _Header extends StatelessWidget {
               Text(profile.riotId.toString(), style: text.titleLarge),
               Text('Nível ${profile.level}', style: text.bodyMedium),
               Text(
-                'Atualizado ${formatUpdatedAgo(profile.fetchedAt, now: DateTime.now())}',
+                'Atualizado ${formatTimeAgo(profile.fetchedAt, now: DateTime.now())}',
                 style: text.bodySmall,
               ),
             ],

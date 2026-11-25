@@ -1,3 +1,4 @@
+import 'package:elo_squad/features/matches/data/match_data_providers.dart';
 import 'package:elo_squad/features/summoner/data/summoner_data_providers.dart';
 import 'package:elo_squad/features/summoner/domain/repositories/summoner_repository.dart';
 import 'package:elo_squad/features/summoner/presentation/pages/home_page.dart';
@@ -7,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 
+import '../../../helpers/fake_match_repository.dart';
 import '../../../helpers/profiles.dart';
 
 class MockSummonerRepository extends Mock implements SummonerRepository {}
@@ -26,7 +28,11 @@ void main() {
 
   Future<void> pumpHome(WidgetTester tester) => tester.pumpWidget(
     ProviderScope(
-      overrides: [summonerRepositoryProvider.overrideWithValue(repository)],
+      overrides: [
+        summonerRepositoryProvider.overrideWithValue(repository),
+        // O perfil agora mostra o histórico: sem isto, abriria o banco real.
+        matchRepositoryProvider.overrideWithValue(FakeMatchRepository()),
+      ],
       child: const MaterialApp(home: HomePage()),
     ),
   );

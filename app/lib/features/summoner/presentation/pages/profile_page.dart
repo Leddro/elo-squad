@@ -1,6 +1,8 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../matches/presentation/providers/match_history_providers.dart';
+import '../../../matches/presentation/widgets/match_history_sliver.dart';
 import '../../domain/entities/riot_id.dart';
 import '../providers/summoner_profile_provider.dart';
 import '../widgets/failure_view.dart';
@@ -43,17 +45,35 @@ class ProfilePage extends ConsumerWidget {
         // 1. Tem perfil (inclusive durante o puxar-para-atualizar): mostra.
         AsyncValue(:final value?) => RefreshIndicator(
           onRefresh: () async {
+            final matches = matchRefreshProvider(value.puuid);
             // invalidate: descarta o estado atual e manda buscar de novo.
-            // read(...future): espera essa nova busca terminar, para o
-            // indicador de "atualizando" sumir na hora certa.
             ref.invalidate(provider);
-            try {
-              await ref.read(provider.future);
-            } on Object {
-              // A falha já é avisada pelo ref.listen acima (SnackBar).
-            }
+            ref.invalidate(matches);
+            // Espera as DUAS buscas (em paralelo), para o indicador de
+            // "atualizando" sumir na hora certa. As falhas já são avisadas
+            // na tela: SnackBar do perfil (ref.listen) e aviso nas partidas.
+            await Future.wait([
+              ref.read(provider.future).then((_) {}, onError: (_) {}),
+              ref.read(matches.future).then((_) {}, onError: (_) {}),
+            ]);
           },
-          child: ProfileView(profile: value),
+          // Uma rolagem só para a tela inteira, feita de SLIVERS: o perfil
+          // no topo e o histórico embaixo, com rolagem infinita.
+          // AlwaysScrollable: o "puxar para atualizar" precisa de algo
+          // rolável, mesmo quando o conteúdo cabe inteiro na tela.
+          child: CustomScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            slivers: [
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+                sliver: SliverToBoxAdapter(child: ProfileView(profile: value)),
+              ),
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                sliver: MatchHistorySliver(puuid: value.puuid),
+              ),
+            ],
+          ),
         ),
         // 2. Tem erro e NÃO está tentando de novo: tela de erro.
         AsyncValue(:final error?, isLoading: false) => FailureView(

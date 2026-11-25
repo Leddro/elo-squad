@@ -59,7 +59,7 @@ uv run fastapi dev app/main.py    # http://127.0.0.1:8000/docs
 cd app
 flutter pub get
 dart run build_runner build       # gera *.g.dart e *.freezed.dart
-flutter test                      # 107 testes
+flutter test                      # 123 testes
 ```
 
 **Rodar no celular por USB** (com o proxy rodando no PC):
