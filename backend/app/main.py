@@ -7,6 +7,7 @@ Documentação interativa:     http://127.0.0.1:8000/docs
 import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from dataclasses import dataclass
 from typing import Annotated
 
 import httpx
@@ -24,12 +25,22 @@ from app.service import SummonerService
 logger = logging.getLogger(__name__)
 
 
-def build_service(http: httpx.AsyncClient, settings: Settings, cache: TTLCache | None = None) -> SummonerService:
-    """Monta o grafo de objetos. Os testes chamam isto com um http falso."""
+@dataclass(frozen=True, slots=True)
+class Services:
+    summoner: SummonerService
+
+
+def build_services(http: httpx.AsyncClient, settings: Settings, cache: TTLCache | None = None) -> Services:
+    """Monta o grafo de objetos. Os testes chamam isto com um http falso.
+
+    Os serviços COMPARTILHAM o cliente da Riot, o Data Dragon e o cache.
+    """
     cache = cache or TTLCache()
     riot = RiotClient(http, settings.riot_api_key.get_secret_value(), settings.riot_region, settings.riot_platform)
     ddragon = DataDragon(http, cache, settings.ddragon_language, settings.ttl_ddragon_version_s)
-    return SummonerService(riot, ddragon, cache, settings)
+    return Services(
+        summoner=SummonerService(riot, ddragon, cache, settings),
+    )
 
 
 @asynccontextmanager
@@ -37,7 +48,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     # Roda UMA vez ao subir o servidor: um único AsyncClient reaproveita conexões
     # (keep-alive) com a Riot em vez de abrir uma nova a cada requisição.
     async with httpx.AsyncClient(timeout=10.0) as http:
-        app.state.summoner_service = build_service(http, get_settings())
+        app.state.services = build_services(http, get_settings())
         yield
     # Ao sair do `async with`, as conexões são fechadas (servidor desligando).
 
@@ -45,13 +56,13 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 app = FastAPI(title="Elo Squad Proxy", version="0.1.0", lifespan=lifespan)
 
 
-def get_summoner_service(request: Request) -> SummonerService:
-    """Dependência: as rotas pedem o serviço por aqui, nunca criam o próprio.
+def get_services(request: Request) -> Services:
+    """Dependência: as rotas pedem os serviços por aqui, nunca criam os próprios.
     Nos testes, `app.dependency_overrides` troca esta função por uma versão falsa."""
-    return request.app.state.summoner_service
+    return request.app.state.services
 
 
-SummonerServiceDep = Annotated[SummonerService, Depends(get_summoner_service)]
+ServicesDep = Annotated[Services, Depends(get_services)]
 
 _ERROR_RESPONSES = {
     404: {"model": ErrorResponse, "description": "Riot ID não encontrado"},
@@ -66,8 +77,8 @@ async def health() -> dict[str, str]:
 
 
 @app.get("/summoner/{game_name}/{tag_line}", response_model=SummonerProfile, responses=_ERROR_RESPONSES)
-async def get_summoner(game_name: str, tag_line: str, service: SummonerServiceDep) -> SummonerProfile:
-    return await service.get_profile(game_name, tag_line)
+async def get_summoner(game_name: str, tag_line: str, services: ServicesDep) -> SummonerProfile:
+    return await services.summoner.get_profile(game_name, tag_line)
 
 
 # ---------- Exceções internas → status HTTP + ErrorResponse ----------

@@ -7,7 +7,7 @@ from typing import Any
 from app import mappers
 from app.cache import CacheEntry, TTLCache
 from app.config import Settings
-from app.ddragon import Champion, DataDragon, profile_icon_url
+from app.ddragon import DataDragon, profile_icon_url
 from app.errors import RiotError
 from app.models import SummonerProfile, UnavailableSection
 from app.riot_client import RiotClient
@@ -42,16 +42,16 @@ class SummonerService:
                                    lambda: self._riot.get_league_entries(puuid)),
             self._cache.get_or_set(f"masteries:{puuid}", self._s.ttl_masteries_s,
                                    lambda: self._riot.get_top_masteries(puuid, self._s.top_masteries_count)),
-            self._load_ddragon(),
+            self._ddragon.load(),
             return_exceptions=True,
         )
 
         # 3) Summoner é ESSENCIAL: sem ele não há perfil → a exceção sobe e vira 404/429/503.
         if isinstance(summoner, BaseException):
             raise summoner
-        if isinstance(ddragon, BaseException):  # _load_ddragon já trata RiotError; aqui só bug
+        if isinstance(ddragon, BaseException):  # load() já trata RiotError; aqui só bug
             raise ddragon
-        version, champions = ddragon
+        version = ddragon.latest
 
         # 4) Ranked e masteries são OPCIONAIS: falha da Riot → null + aviso em `unavailable`.
         unavailable: list[UnavailableSection] = []
@@ -65,7 +65,7 @@ class SummonerService:
             profile_icon_url=profile_icon_url(version, summoner.value["profileIconId"]) if version else None,
             ranked=mappers.to_ranked(ranked_raw.value) if ranked_raw else None,
             top_masteries=(
-                mappers.to_masteries(masteries_raw.value, champions, version) if masteries_raw else None
+                mappers.to_masteries(masteries_raw.value, ddragon.champions, version) if masteries_raw else None
             ),
             unavailable=unavailable,
             # O elo é o dado mais volátil, então é a "idade" dele que importa mostrar.
@@ -85,12 +85,3 @@ class SummonerService:
         if isinstance(result, BaseException):
             raise result  # bug nosso (KeyError etc.): não esconder como "indisponível"
         return result
-
-    async def _load_ddragon(self) -> tuple[str | None, dict[int, Champion]]:
-        """Data Dragon fora do ar não derruba a resposta: só ficam sem imagens/nomes."""
-        try:
-            version = await self._ddragon.latest_version()
-            return version, await self._ddragon.champions(version)
-        except RiotError as e:
-            logger.warning("Data Dragon indisponível: %s", e)
-            return None, {}

@@ -1,12 +1,15 @@
 """Data Dragon: CDN pública da Riot com nomes e imagens (não usa a chave da API)."""
 
-from dataclasses import dataclass
+import logging
+from dataclasses import dataclass, field
 from typing import Any
 
 import httpx
 
 from app.cache import TTLCache
-from app.errors import UpstreamError
+from app.errors import RiotError, UpstreamError
+
+logger = logging.getLogger(__name__)
 
 DDRAGON_URL = "https://ddragon.leagueoflegends.com"
 
@@ -19,6 +22,21 @@ _CHAMPIONS_TTL_S = 7 * 24 * 3600
 class Champion:
     image_id: str  # usado na URL da imagem. Ex.: "MonkeyKing"
     name: str      # nome exibido.            Ex.: "Wukong"
+
+
+@dataclass(frozen=True, slots=True)
+class StaticData:
+    """Tudo o que os serviços precisam do Data Dragon numa resposta.
+
+    Vazio (sem versões nem campeões) quando o Data Dragon está fora do ar: as
+    respostas continuam, só que sem nomes e imagens.
+    """
+    versions: list[str] = field(default_factory=list)  # da mais nova para a mais antiga
+    champions: dict[int, Champion] = field(default_factory=dict)
+
+    @property
+    def latest(self) -> str | None:
+        return self.versions[0] if self.versions else None
 
 
 def profile_icon_url(version: str, icon_id: int) -> str:
@@ -36,8 +54,17 @@ class DataDragon:
         self._language = language
         self._version_ttl_s = version_ttl_s
 
-    async def latest_version(self) -> str:
-        entry = await self._cache.get_or_set("ddragon:version", self._version_ttl_s, self._fetch_latest_version)
+    async def load(self) -> StaticData:
+        """Versões + campeões da versão mais nova. Nunca lança RiotError: em falha, StaticData vazio."""
+        try:
+            versions = await self.versions()
+            return StaticData(versions=versions, champions=await self.champions(versions[0]))
+        except RiotError as e:
+            logger.warning("Data Dragon indisponível: %s", e)
+            return StaticData()
+
+    async def versions(self) -> list[str]:
+        entry = await self._cache.get_or_set("ddragon:versions", self._version_ttl_s, self._fetch_versions)
         return entry.value
 
     async def champions(self, version: str) -> dict[int, Champion]:
@@ -48,9 +75,8 @@ class DataDragon:
         )
         return entry.value
 
-    async def _fetch_latest_version(self) -> str:
-        versions = await self._get_json(f"{DDRAGON_URL}/api/versions.json")
-        return versions[0]  # a lista vem da mais nova para a mais antiga
+    async def _fetch_versions(self) -> list[str]:
+        return await self._get_json(f"{DDRAGON_URL}/api/versions.json")  # mais nova primeiro
 
     async def _fetch_champions(self, version: str) -> dict[int, Champion]:
         data = await self._get_json(f"{DDRAGON_URL}/cdn/{version}/data/{self._language}/champion.json")
