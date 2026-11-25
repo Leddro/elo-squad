@@ -36,6 +36,16 @@ class RiotClient:
             params={"count": count},
         )
 
+    async def get_match_ids(self, puuid: str, start: int, count: int) -> list[str]:
+        # match-v5 usa a REGIÃO (americas), como o account-v1. Vem da mais nova para a mais antiga.
+        return await self._get(
+            f"{self._region_url}/lol/match/v5/matches/by-puuid/{puuid}/ids",
+            params={"start": start, "count": count},
+        )
+
+    async def get_match(self, match_id: str) -> dict[str, Any]:
+        return await self._get(f"{self._region_url}/lol/match/v5/matches/{quote(match_id, safe='')}")
+
     async def _get(self, url: str, params: dict[str, Any] | None = None) -> Any:
         """Centraliza a tradução de status HTTP da Riot → exceções nossas."""
         try:

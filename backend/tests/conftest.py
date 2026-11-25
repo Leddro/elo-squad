@@ -4,8 +4,10 @@ httpx.MockTransport intercepta as requisições: nenhuma chamada sai para a inte
 os testes não gastam rate limit e rodam no CI sem a chave da Riot.
 """
 
+import copy
 from collections import Counter
 from collections.abc import Iterator
+from typing import Any
 
 import httpx
 import pytest
@@ -34,12 +36,42 @@ CHAMPIONS = {"data": {
     "MonkeyKing": {"id": "MonkeyKing", "key": "62", "name": "Wukong"},
 }}
 
-# Trecho da URL → nome da rota (para contar chamadas e sobrescrever respostas).
+# Histórico com 25 partidas, da mais nova (BR1_1024) para a mais antiga (BR1_1000).
+MATCH_IDS = [f"BR1_{1000 + i}" for i in reversed(range(25))]
+
+
+def make_match(match_id: str) -> dict[str, Any]:
+    """Partida no formato do match-v5 (só os campos que o proxy lê, mais alguns de enfeite)."""
+
+    def player(puuid: str, champion_id: int, win: bool) -> dict[str, Any]:
+        return {
+            "puuid": puuid, "championId": champion_id, "championName": "MonkeyKing",
+            "kills": 7, "deaths": 2, "assists": 9,
+            "totalMinionsKilled": 150, "neutralMinionsKilled": 30,
+            "item0": 3111, "item1": 0, "item2": 6676, "item3": 0, "item4": 0, "item5": 0, "item6": 3340,
+            "win": win, "placement": 0, "gameEndedInEarlySurrender": False,
+        }
+
+    return {
+        "metadata": {"matchId": match_id, "participants": [PUUID, "outro-puuid"]},
+        "info": {
+            "queueId": 420,
+            "gameDuration": 1702,
+            "gameEndTimestamp": 1_795_563_763_329,  # ms
+            "gameVersion": "16.22.841.3489",        # patch ANTERIOR ao mais novo do Data Dragon
+            "participants": [player(PUUID, 62, True), player("outro-puuid", 157, False)],
+        },
+    }
+
+
+# Trecho da URL → nome da rota. A ORDEM importa: "by-puuid" antes do detalhe da partida.
 ROUTES = {
     "/riot/account/v1/": "account",
     "/lol/summoner/v4/": "summoner",
     "/lol/league/v4/": "league",
     "/lol/champion-mastery/v4/": "masteries",
+    "/lol/match/v5/matches/by-puuid/": "match_ids",
+    "/lol/match/v5/matches/": "match",
     "/api/versions.json": "versions",
     "/champion.json": "champions",
 }
@@ -50,16 +82,33 @@ DEFAULTS = {
 
 
 class FakeRiot:
-    """Responde como a Riot. `overrides` troca a resposta de uma rota (ex.: forçar 500)."""
+    """Responde como a Riot.
+
+    - `overrides` troca a resposta de uma rota inteira (ex.: forçar 500 no league).
+    - `matches` tem o JSON de cada partida: o teste pode editar (ex.: mudar a fila).
+    - `match_overrides` troca a resposta de UMA partida (ex.: 429 só na BR1_1023).
+    """
 
     def __init__(self) -> None:
         self.calls: Counter[str] = Counter()
         self.overrides: dict[str, httpx.Response] = {}
+        self.matches: dict[str, dict[str, Any]] = {mid: make_match(mid) for mid in MATCH_IDS}
+        self.match_overrides: dict[str, httpx.Response] = {}
 
     def __call__(self, request: httpx.Request) -> httpx.Response:
         route = next(name for part, name in ROUTES.items() if part in request.url.path)
         self.calls[route] += 1
-        return self.overrides.get(route) or httpx.Response(200, json=DEFAULTS[route])
+        if route in self.overrides:
+            return self.overrides[route]
+        if route == "match_ids":
+            start, count = int(request.url.params["start"]), int(request.url.params["count"])
+            return httpx.Response(200, json=MATCH_IDS[start:start + count])
+        if route == "match":
+            match_id = request.url.path.rsplit("/", 1)[-1]
+            if match_id in self.match_overrides:
+                return self.match_overrides[match_id]
+            return httpx.Response(200, json=copy.deepcopy(self.matches[match_id]))
+        return httpx.Response(200, json=DEFAULTS[route])
 
 
 class FakeClock:

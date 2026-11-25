@@ -22,6 +22,7 @@ Testes: `uv run python -m pytest`
 |---|---|---|
 | GET | `/health` | `{"status": "ok"}` |
 | GET | `/summoner/{gameName}/{tagLine}` | `SummonerProfile` (ver `app/models.py`) |
+| GET | `/matches/{puuid}?start=0&count=10` | `MatchPage`: partidas da mais nova para a mais antiga; `nextStart` é o `start` da próxima página (`null` = fim). `count` de 1 a 20 |
 
 Erros: `{"code": "...", "message": "..."}` com 404 `SUMMONER_NOT_FOUND`, 429 `RATE_LIMITED` (com `Retry-After`) e 503 `UPSTREAM_UNAVAILABLE`.
 
@@ -35,6 +36,8 @@ Erros: `{"code": "...", "message": "..."}` com 404 `SUMMONER_NOT_FOUND`, 429 `RA
 | `app/ddragon.py` | Nomes e imagens de campeões/ícones |
 | `app/mappers.py` | Tradução Riot → contrato (camada anticorrupção) |
 | `app/cache.py` | Cache em memória com TTL |
-| `app/service.py` | Orquestração: chamadas paralelas e resposta parcial |
+| `app/service.py` | Perfil: chamadas paralelas e resposta parcial |
+| `app/match_service.py` | Histórico: lista de IDs + detalhes em paralelo, paginação |
 | `app/main.py` | Rotas, injeção de dependência, erros → HTTP |
-| `tests/` | Testes com a Riot simulada (`httpx.MockTransport`) |
+| `tests/conftest.py` | Riot simulada (`httpx.MockTransport`), compartilhada pelos testes |
+| `tests/test_*.py` | Testes de cada endpoint |

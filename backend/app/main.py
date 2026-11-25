@@ -11,14 +11,15 @@ from dataclasses import dataclass
 from typing import Annotated
 
 import httpx
-from fastapi import Depends, FastAPI, Request
+from fastapi import Depends, FastAPI, Query, Request
 from fastapi.responses import JSONResponse
 
 from app.cache import TTLCache
 from app.config import Settings, get_settings
 from app.ddragon import DataDragon
 from app.errors import NotFoundError, RateLimitedError, UpstreamError
-from app.models import ErrorCode, ErrorResponse, SummonerProfile
+from app.match_service import MatchService
+from app.models import ErrorCode, ErrorResponse, MatchPage, SummonerProfile
 from app.riot_client import RiotClient
 from app.service import SummonerService
 
@@ -28,18 +29,21 @@ logger = logging.getLogger(__name__)
 @dataclass(frozen=True, slots=True)
 class Services:
     summoner: SummonerService
+    matches: MatchService
 
 
 def build_services(http: httpx.AsyncClient, settings: Settings, cache: TTLCache | None = None) -> Services:
     """Monta o grafo de objetos. Os testes chamam isto com um http falso.
 
-    Os serviços COMPARTILHAM o cliente da Riot, o Data Dragon e o cache.
+    Os dois serviços COMPARTILHAM o cliente da Riot, o Data Dragon e o cache: a
+    lista de campeões baixada para o perfil serve também para o histórico.
     """
     cache = cache or TTLCache()
     riot = RiotClient(http, settings.riot_api_key.get_secret_value(), settings.riot_region, settings.riot_platform)
     ddragon = DataDragon(http, cache, settings.ddragon_language, settings.ttl_ddragon_version_s)
     return Services(
         summoner=SummonerService(riot, ddragon, cache, settings),
+        matches=MatchService(riot, ddragon, cache, settings),
     )
 
 
@@ -79,6 +83,18 @@ async def health() -> dict[str, str]:
 @app.get("/summoner/{game_name}/{tag_line}", response_model=SummonerProfile, responses=_ERROR_RESPONSES)
 async def get_summoner(game_name: str, tag_line: str, services: ServicesDep) -> SummonerProfile:
     return await services.summoner.get_profile(game_name, tag_line)
+
+
+@app.get("/matches/{puuid}", response_model=MatchPage, responses=_ERROR_RESPONSES)
+async def get_matches(
+    puuid: str,
+    services: ServicesDep,
+    start: Annotated[int, Query(ge=0, description="Posição da 1ª partida (0 = a mais recente)")] = 0,
+    # Teto baixo de propósito: cada partida é 1 chamada à Riot (dev key: 20 por segundo).
+    count: Annotated[int, Query(ge=1, le=20, description="Partidas por página")] = 10,
+) -> MatchPage:
+    # O PUUID vem do perfil (GET /summoner): o app já o tem, então pulamos o account-v1.
+    return await services.matches.get_matches(puuid, start, count)
 
 
 # ---------- Exceções internas → status HTTP + ErrorResponse ----------

@@ -38,6 +38,15 @@ class StaticData:
     def latest(self) -> str | None:
         return self.versions[0] if self.versions else None
 
+    def version_for_patch(self, game_version: str) -> str | None:
+        """"16.23.841.3489" (versão do jogo na partida) → "16.23.1" (versão do Data Dragon).
+
+        Itens são removidos entre temporadas: a imagem tem de vir do patch em que
+        a partida foi jogada. Patch desconhecido → a versão mais nova.
+        """
+        major_minor = ".".join(game_version.split(".")[:2]) + "."
+        return next((v for v in self.versions if v.startswith(major_minor)), self.latest)
+
 
 def profile_icon_url(version: str, icon_id: int) -> str:
     return f"{DDRAGON_URL}/cdn/{version}/img/profileicon/{icon_id}.png"
@@ -45,6 +54,10 @@ def profile_icon_url(version: str, icon_id: int) -> str:
 
 def champion_icon_url(version: str, image_id: str) -> str:
     return f"{DDRAGON_URL}/cdn/{version}/img/champion/{image_id}.png"
+
+
+def item_icon_url(version: str, item_id: int) -> str:
+    return f"{DDRAGON_URL}/cdn/{version}/img/item/{item_id}.png"
 
 
 class DataDragon:

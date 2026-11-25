@@ -78,6 +78,47 @@ class SummonerProfile(CamelModel):
     fetched_at: datetime
 
 
+# ---------- Histórico de partidas (fase 2) ----------
+
+# Nomes nossos para as filas: o `queueId` numérico da Riot (420, 450...) não vaza para o app.
+QueueType = Literal["RANKED_SOLO", "RANKED_FLEX", "NORMAL", "ARAM", "ARENA", "OTHER"]
+
+# REMAKE: partida encerrada nos primeiros minutos (alguém não conectou). Não conta como V/D.
+MatchResult = Literal["WIN", "LOSS", "REMAKE"]
+
+
+class Item(CamelModel):
+    item_id: int
+    icon_url: str | None  # None se o Data Dragon estiver fora do ar
+
+
+class MatchSummary(CamelModel):
+    """Uma partida do ponto de vista de UM jogador (o dono do PUUID buscado)."""
+    match_id: str  # ex.: "BR1_3307659647". Estável: o app usa para tirar duplicadas
+    queue: QueueType
+    result: MatchResult
+    placement: int | None  # só na Arena (1º a 8º); None nos outros modos
+    champion_id: int
+    champion_name: str | None
+    champion_icon_url: str | None
+    kills: int = Field(ge=0)
+    deaths: int = Field(ge=0)
+    assists: int = Field(ge=0)
+    cs: int = Field(ge=0)  # tropas + monstros da selva
+    # Posicional, sempre 6 posições: None = espaço vazio no inventário.
+    items: list[Item | None] = Field(min_length=6, max_length=6)
+    trinket: Item | None  # o 7º espaço (sentinela/lente)
+    duration_seconds: int = Field(ge=0)
+    played_at: datetime  # quando a partida TERMINOU
+
+
+class MatchPage(CamelModel):
+    """Resposta de GET /matches/{puuid}?start=&count=. Partidas da mais nova para a mais antiga."""
+    matches: list[MatchSummary]
+    # Valor para pedir a próxima página (?start=nextStart). None = acabou o histórico.
+    next_start: int | None
+
+
 class ErrorResponse(CamelModel):
     """Corpo de toda resposta de erro (4xx/5xx)."""
     code: ErrorCode
