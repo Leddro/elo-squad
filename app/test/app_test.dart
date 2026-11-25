@@ -1,14 +1,56 @@
-import 'package:elo_squad/app.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:elo_squad/core/error/failure.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
+import 'helpers/fake_auth_repository.dart';
+import 'helpers/pump_app.dart';
+
 void main() {
-  // Smoke test: o app sobe e abre na tela de busca.
-  testWidgets('o app abre na tela de busca', (tester) async {
-    await tester.pumpWidget(const ProviderScope(child: EloSquadApp()));
+  testWidgets('deslogado: abre no login', (tester) async {
+    await pumpApp(tester, auth: FakeAuthRepository());
+
+    expect(find.text('Entrar com Google'), findsOneWidget);
+    expect(find.byType(TextField), findsNothing);
+  });
+
+  testWidgets('logado: abre na busca', (tester) async {
+    await pumpApp(tester);
 
     expect(find.text('Elo Squad'), findsOneWidget);
     expect(find.byType(TextField), findsOneWidget);
+  });
+
+  testWidgets('entrar leva à busca, e sair volta ao login', (tester) async {
+    await pumpApp(tester, auth: FakeAuthRepository());
+
+    await tester.tap(find.text('Entrar com Google'));
+    await pumpFrames(tester);
+    expect(find.byType(TextField), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Sair'));
+    await pumpFrames(tester);
+    expect(find.text('Entrar com Google'), findsOneWidget);
+  });
+
+  testWidgets('login cancelado: continua no login, sem erro', (tester) async {
+    final auth = FakeAuthRepository()..onSignIn = () async => false;
+    await pumpApp(tester, auth: auth);
+
+    await tester.tap(find.text('Entrar com Google'));
+    await pumpFrames(tester);
+
+    expect(find.text('Entrar com Google'), findsOneWidget);
+    expect(find.byType(SnackBar), findsNothing);
+  });
+
+  testWidgets('login sem internet: avisa e continua no login', (tester) async {
+    final auth = FakeAuthRepository()
+      ..onSignIn = () async => throw const NetworkFailure();
+    await pumpApp(tester, auth: auth);
+
+    await tester.tap(find.text('Entrar com Google'));
+    await pumpFrames(tester);
+
+    expect(find.text('Sem conexão. Verifique sua internet.'), findsOneWidget);
   });
 }

@@ -1,7 +1,10 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../../../core/router/app_router.dart';
+import '../../../auth/data/auth_providers.dart';
 import '../../domain/entities/riot_id.dart';
-import 'profile_page.dart';
 
 /// Tela inicial: barra de busca.
 ///
@@ -38,8 +41,10 @@ class _HomePageState extends State<HomePage> {
 
     setState(() => _errorText = null);
     FocusScope.of(context).unfocus(); // fecha o teclado
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => ProfilePage(riotId: riotId)),
+    // Pelo NOME da rota; o go_router monta e codifica o caminho.
+    context.pushNamed(
+      Routes.profile,
+      pathParameters: {'gameName': riotId.gameName, 'tagLine': riotId.tagLine},
     );
   }
 
@@ -47,7 +52,10 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('Elo Squad')),
+      appBar: AppBar(
+        title: const Text('Elo Squad'),
+        actions: const [_SignOutButton()],
+      ),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -94,4 +102,16 @@ class _HomePageState extends State<HomePage> {
       ),
     );
   }
+}
+
+class _SignOutButton extends ConsumerWidget {
+  const _SignOutButton();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) => IconButton(
+    tooltip: 'Sair',
+    icon: const Icon(Icons.logout),
+    // Depois do logout, o roteador leva ao login sozinho.
+    onPressed: () => ref.read(authRepositoryProvider).signOut(),
+  );
 }

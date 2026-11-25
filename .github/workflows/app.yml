@@ -58,6 +58,11 @@ jobs:
         # gera do zero, então um gerado desatualizado nunca passa despercebido.
         run: dart run build_runner build
 
+      - name: Configuração do Firebase (stub)
+        # O firebase_options.dart real fica fora do git; os testes não
+        # inicializam o Firebase, então um stub com valores falsos basta.
+        run: cp tool/ci/firebase_options_stub.dart lib/firebase_options.dart
+
       - name: Análise estática
         run: flutter analyze
 

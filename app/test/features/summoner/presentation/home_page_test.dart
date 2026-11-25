@@ -1,15 +1,13 @@
-import 'package:elo_squad/features/matches/data/match_data_providers.dart';
 import 'package:elo_squad/features/summoner/data/summoner_data_providers.dart';
 import 'package:elo_squad/features/summoner/domain/entities/profile_result.dart';
 import 'package:elo_squad/features/summoner/domain/repositories/summoner_repository.dart';
 import 'package:elo_squad/features/summoner/presentation/pages/home_page.dart';
 import 'package:elo_squad/features/summoner/presentation/pages/profile_page.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 
-import '../../../helpers/fake_match_repository.dart';
+import '../../../helpers/pump_app.dart';
 import '../../../helpers/profiles.dart';
 
 class MockSummonerRepository extends Mock implements SummonerRepository {}
@@ -27,25 +25,10 @@ void main() {
         .thenAnswer((_) async => ProfileResult(profile: makeProfile()));
   });
 
-  Future<void> pumpHome(WidgetTester tester) => tester.pumpWidget(
-    ProviderScope(
-      overrides: [
-        summonerRepositoryProvider.overrideWithValue(repository),
-        // O perfil agora mostra o histórico: sem isto, abriria o banco real.
-        matchRepositoryProvider.overrideWithValue(FakeMatchRepository()),
-      ],
-      child: const MaterialApp(home: HomePage()),
-    ),
+  Future<void> pumpHome(WidgetTester tester) => pumpApp(
+    tester,
+    overrides: [summonerRepositoryProvider.overrideWithValue(repository)],
   );
-
-  /// Avança 1s em frames de 100ms. Cada pump() é UM frame: a navegação precisa
-  /// de vários (montar a rota, animar ~450ms, desenhar o resultado da busca).
-  /// Não dá para usar pumpAndSettle(): o skeleton pulsa para sempre.
-  Future<void> pumpFrames(WidgetTester tester) async {
-    for (var i = 0; i < 10; i++) {
-      await tester.pump(const Duration(milliseconds: 100));
-    }
-  }
 
   Future<void> search(WidgetTester tester, String text) async {
     await tester.enterText(find.byType(TextField), text);
