@@ -1,86 +1,85 @@
-# Publicação do proxy (Google Cloud Run)
+# Rodar e publicar o proxy
 
-O proxy roda no Cloud Run, no mesmo projeto do Firebase (`elo-squad-app`), em
-`southamerica-east1` (São Paulo, a mesma região do Firestore). Duas tarefas do
-Cloud Scheduler atualizam o ranking.
+O proxy usa o Firebase do projeto `elo-squad-app` no plano gratuito (Spark):
+Firestore, Authentication e Cloud Messaging. Ele pode rodar em dois lugares:
 
-## Uma vez só
+- **No PC**, para testar com o celular na mesma rede Wi-Fi.
+- **No Render** (plano gratuito, sem cartão), para o grupo usar no dia a dia. As
+  tarefas do ranking rodam no GitHub Actions.
 
-1. **Firebase Console → Authentication → Sign-in method → Google → Ativar.**
-   Depois, no PC, regere a configuração do app (o `google-services.json` passa
-   a ter o client ID do login com Google):
+## Credencial do Firebase (uma vez só)
 
-   ```powershell
-   cd app
-   & "$env:LOCALAPPDATA\Pub\Cache\bin\flutterfire.bat" configure --project=elo-squad-app --platforms=android --android-package-name=io.github.leddro.elo_squad --yes
+O proxy escreve no Firestore e manda push com uma conta de serviço:
+
+1. Firebase Console → ⚙️ **Configurações do projeto** → **Contas de serviço** →
+   **Gerar nova chave privada**.
+2. Salve o arquivo como `backend/firebase-sa.json` (ignorado pelo git) e
+   acrescente ao `backend/.env`:
+
+   ```
+   FIREBASE_CREDENTIALS_FILE=firebase-sa.json
    ```
 
-2. **Plano Blaze** (Firebase Console → Upgrade). O Cloud Run e o Cloud
-   Scheduler exigem faturamento ativo; o uso do app fica dentro da cota
-   gratuita. Vale criar um alerta de orçamento (ex.: US$ 1) em Faturamento.
+Essa chave dá acesso total ao projeto: nunca a versione nem a mande por chat.
 
-3. **Chave de produção da Riot.** A dev key expira em 24 h. Peça uma
-   *Personal API Key* em https://developer.riotgames.com (não expira; uso
-   pessoal e para amigos).
-
-4. **Google Cloud CLI**: instale (https://cloud.google.com/sdk/docs/install) e:
-
-   ```powershell
-   gcloud auth login
-   gcloud config set project elo-squad-app
-   gcloud services enable run.googleapis.com cloudbuild.googleapis.com secretmanager.googleapis.com cloudscheduler.googleapis.com
-   ```
-
-5. **Segredos** (Secret Manager; nunca em variável de ambiente comum):
-
-   ```powershell
-   "RGAPI-...sua-chave..." | gcloud secrets create riot-api-key --data-file=-
-   python -c "import secrets; print(secrets.token_urlsafe(32))" | gcloud secrets create jobs-secret --data-file=-
-
-   # A conta de serviço padrão do Cloud Run precisa ler os segredos:
-   $SA = "$(gcloud projects describe elo-squad-app --format='value(projectNumber)')-compute@developer.gserviceaccount.com"
-   gcloud projects add-iam-policy-binding elo-squad-app --member="serviceAccount:$SA" --role="roles/secretmanager.secretAccessor"
-   ```
-
-## Publicar (a cada versão nova do proxy)
+## No PC (teste com o celular)
 
 ```powershell
-gcloud run deploy elo-squad-proxy `
-  --source backend `
-  --region southamerica-east1 `
-  --allow-unauthenticated `
-  --max-instances 1 `
-  --set-secrets "RIOT_API_KEY=riot-api-key:latest,JOBS_SECRET=jobs-secret:latest"
+cd backend
+uv run uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
-- `--source`: o Cloud Build monta a imagem com o `backend/Dockerfile`.
-- `--allow-unauthenticated`: a rota é pública, mas toda rota da Riot exige o
-  token do Firebase, e as de tarefas exigem o `X-Jobs-Secret`.
-- `--max-instances 1`: uma instância só mantém o cache em memória coerente e
-  protege a cota da Riot.
-
-O comando mostra a URL (`https://elo-squad-proxy-....run.app`).
-
-## Tarefas agendadas (Cloud Scheduler)
+Na primeira vez, o Windows pergunta sobre o firewall: permita em **redes
+privadas**. Depois, com o celular no mesmo Wi-Fi e conectado por USB:
 
 ```powershell
-$URL = "https://elo-squad-proxy-....run.app"
-$SECRET = gcloud secrets versions access latest --secret=jobs-secret
-
-# Ranking da semana: a cada hora.
-gcloud scheduler jobs create http refresh-rankings --location southamerica-east1 `
-  --schedule "0 * * * *" --time-zone "America/Sao_Paulo" `
-  --uri "$URL/jobs/refresh-rankings" --http-method POST --headers "X-Jobs-Secret=$SECRET"
-
-# Fecha a semana: segunda-feira, 00:05.
-gcloud scheduler jobs create http close-week --location southamerica-east1 `
-  --schedule "5 0 * * 1" --time-zone "America/Sao_Paulo" `
-  --uri "$URL/jobs/close-week" --http-method POST --headers "X-Jobs-Secret=$SECRET"
+ipconfig   # anote o "Endereço IPv4" do Wi-Fi, ex.: 192.168.0.10
+cd app
+flutter run --dart-define=API_BASE_URL=http://192.168.0.10:8000
 ```
 
-## App apontando para o proxy publicado
+## No Render (publicação)
+
+1. Crie uma conta em https://render.com entrando com o GitHub.
+2. **New → Blueprint**, escolha o repositório `elo-squad`. O Render lê o
+   `render.yaml` e pede os valores que faltam:
+   - `RIOT_API_KEY`: a chave da Riot.
+   - `JOBS_SECRET`: um valor aleatório, por exemplo gerado com
+     `python -c "import secrets; print(secrets.token_urlsafe(32))"`.
+3. No serviço criado: **Environment → Secret Files → Add Secret File**, com o
+   nome `firebase-sa.json` e o conteúdo do arquivo da conta de serviço.
+4. Anote a URL do serviço (`https://elo-squad-proxy-xxxx.onrender.com`).
+
+Cada push que muda `backend/` publica de novo sozinho.
+
+**Chave diária da Riot:** enquanto for a dev key, troque `RIOT_API_KEY` em
+**Environment** a cada dia em que forem usar o app. Salvar reinicia o serviço.
+
+**Plano gratuito:** o serviço dorme após 15 min sem uso e leva uns 30–60 s
+para acordar. O app o acorda ao abrir e espera até 60 s por resposta.
+
+### Tarefas do ranking (GitHub Actions)
+
+No GitHub, no repositório: **Settings → Secrets and variables → Actions**.
+
+- Aba **Variables**: `PROXY_URL` = a URL do Render (sem `/` no fim).
+- Aba **Secrets**: `JOBS_SECRET` = o mesmo valor do Render.
+
+O workflow `.github/workflows/jobs.yml` atualiza o ranking a cada hora e fecha
+a semana na segunda às 00:05 (Brasília). Para testar na hora: **Actions →
+Tarefas do ranking → Run workflow**. O GitHub pode atrasar tarefas agendadas
+em alguns minutos e as desliga após 60 dias sem commits no repositório.
+
+### App apontando para o Render
 
 ```powershell
 cd app
-flutter run --dart-define=API_BASE_URL=https://elo-squad-proxy-....run.app
+flutter run --dart-define=API_BASE_URL=https://elo-squad-proxy-xxxx.onrender.com
 ```
+
+## Alternativa: Google Cloud Run
+
+Exige o plano Blaze (com cartão). O `backend/Dockerfile` serve para os dois:
+`gcloud run deploy elo-squad-proxy --source backend --region
+southamerica-east1 --allow-unauthenticated --max-instances 1`, com os
+segredos no Secret Manager e as tarefas no Cloud Scheduler.

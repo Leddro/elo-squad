@@ -1,4 +1,5 @@
 import 'package:elo_squad/app.dart';
+import 'package:elo_squad/core/network/dio_provider.dart';
 import 'package:elo_squad/features/auth/data/auth_providers.dart';
 import 'package:elo_squad/features/matches/data/match_data_providers.dart';
 import 'package:elo_squad/features/notifications/push_service.dart';
@@ -28,6 +29,7 @@ Future<void> pumpApp(
           auth ?? FakeAuthRepository(signedInAs: testUser),
         ),
         matchRepositoryProvider.overrideWithValue(FakeMatchRepository()),
+        proxyWarmUpProvider.overrideWithValue(() {}),
         pushServiceProvider.overrideWithValue(push ?? FakePushService()),
         squadRepositoryProvider.overrideWithValue(
           squads ?? FakeSquadRepository(),

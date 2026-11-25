@@ -1,0 +1,38 @@
+# Tarefas agendadas do ranking: chamam o proxy publicado (Render).
+# Precisam de:  Settings → Secrets and variables → Actions
+#   Variables: PROXY_URL   (ex.: https://elo-squad-proxy.onrender.com)
+#   Secrets:   JOBS_SECRET (o mesmo valor do painel do Render)
+# Sem PROXY_URL, o workflow não faz nada.
+name: Tarefas do ranking
+
+on:
+  schedule:
+    - cron: "0 * * * *" # a cada hora: atualiza o ranking da semana
+    - cron: "5 3 * * 1" # segunda 03:05 UTC = 00:05 em Brasília: fecha a semana
+  workflow_dispatch:
+    inputs:
+      job:
+        description: Tarefa
+        type: choice
+        options: [refresh-rankings, close-week]
+        default: refresh-rankings
+
+permissions: {}
+
+jobs:
+  run:
+    if: vars.PROXY_URL != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Chamar o proxy
+        env:
+          PROXY_URL: ${{ vars.PROXY_URL }}
+          JOBS_SECRET: ${{ secrets.JOBS_SECRET }}
+          JOB: ${{ inputs.job || (github.event.schedule == '5 3 * * 1' && 'close-week' || 'refresh-rankings') }}
+        # --retry: o proxy dorme sem uso e leva até ~1 min para acordar.
+        # As duas rotas podem rodar de novo sem estragos.
+        run: |
+          curl --fail-with-body --silent --show-error \
+            --retry 4 --retry-delay 20 --retry-all-errors --max-time 180 \
+            -X POST -H "X-Jobs-Secret: $JOBS_SECRET" "$PROXY_URL/jobs/$JOB"

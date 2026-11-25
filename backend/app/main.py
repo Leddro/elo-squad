@@ -97,15 +97,19 @@ class _UnavailableStore:
 
 
 def _firebase(settings: Settings) -> tuple[object, Store, Notifier]:
-    if "K_SERVICE" not in os.environ:  # fora do Cloud Run (ex.: no PC)
+    if "K_SERVICE" not in os.environ:  # fora do Google Cloud (PC, Render)
         # Não procurar o servidor de metadados do Google Cloud: sem ele, a
         # busca pela credencial demora ~20 s antes de desistir.
         os.environ.setdefault("NO_GCE_CHECK", "true")
     import firebase_admin
+    from firebase_admin import credentials
     from firebase_admin import firestore_async
     from google.auth.exceptions import DefaultCredentialsError
 
-    fb_app = firebase_admin.initialize_app(options={"projectId": settings.firebase_project_id})
+    credential = (
+        credentials.Certificate(settings.firebase_credentials_file) if settings.firebase_credentials_file else None
+    )
+    fb_app = firebase_admin.initialize_app(credential, options={"projectId": settings.firebase_project_id})
     try:
         store: Store = FirestoreStore(firestore_async.client(fb_app))
     except DefaultCredentialsError:

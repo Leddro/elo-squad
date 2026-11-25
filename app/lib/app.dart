@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
+import 'core/network/dio_provider.dart';
 import 'core/router/app_router.dart';
 import 'features/auth/data/auth_providers.dart';
 import 'features/notifications/push_service.dart';
@@ -24,6 +25,7 @@ class _EloSquadAppState extends ConsumerState<EloSquadApp> {
   @override
   void initState() {
     super.initState();
+    ref.read(proxyWarmUpProvider)();
     final push = ref.read(pushServiceProvider);
 
     // Logou (ou abriu já logado): registra o aparelho para receber push.

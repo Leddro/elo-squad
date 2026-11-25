@@ -17,3 +17,14 @@ final dioProvider = Provider<Dio>((ref) {
   ref.onDispose(dio.close);
   return dio;
 });
+
+/// Acorda o proxy assim que o app abre (no Render gratuito ele dorme sem
+/// uso), para a primeira busca de verdade não pagar a espera inteira.
+/// Silencioso: se falhar, as telas mostram o erro quando precisarem.
+final proxyWarmUpProvider = Provider<void Function()>(
+  (ref) =>
+      () => ref
+          .read(dioProvider)
+          .get<void>('/health')
+          .then<void>((_) {}, onError: (Object _) {}),
+);

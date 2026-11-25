@@ -16,10 +16,13 @@ class Settings(BaseSettings):
     riot_region: str = "americas"
     riot_platform: str = "br1"
 
-    # Firebase (fase 3). Em produção (Cloud Run) a credencial vem do ambiente;
-    # no PC, rode o emulador e defina FIRESTORE_EMULATOR_HOST=127.0.0.1:8080.
+    # Firebase (fase 3). Credencial: o JSON da conta de serviço (Firebase
+    # Console → Configurações → Contas de serviço). No Render, é um Secret File;
+    # no PC, um arquivo ignorado pelo git (firebase-sa.json). Sem ele, vale a
+    # credencial do ambiente (ADC) ou o emulador (FIRESTORE_EMULATOR_HOST).
     firebase_project_id: str = "elo-squad-app"
-    # Segredo das tarefas agendadas (POST /jobs/...), enviado pelo Cloud Scheduler
+    firebase_credentials_file: str | None = None
+    # Segredo das tarefas agendadas (POST /jobs/...), enviado pelo GitHub Actions
     # no cabeçalho X-Jobs-Secret. Sem ele, as rotas /jobs ficam desligadas.
     jobs_secret: SecretStr | None = None
 

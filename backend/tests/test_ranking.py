@@ -209,6 +209,29 @@ def test_fechar_a_semana_avisa_o_destaque_e_abre_a_semana_nova(
     assert store.snapshots["2026-W49"]["p-b"].entry.tier == "GOLD"  # type: ignore[union-attr]
 
 
+def test_fechar_a_semana_de_novo_nao_repete_nada(
+    service: RankingService, store: InMemoryStore, riot: FakeRiot, notifier: FakeNotifier,
+    moment: Moment, brabos: Squad,
+) -> None:
+    riot.league["p-a"] = league("GOLD", "II", 54)
+    riot.league["p-b"] = league("SILVER", "I", 80)
+    run(service.refresh())
+    moment.now = NEXT_MONDAY
+    riot.league["p-b"] = league("GOLD", "IV", 30)
+    run(service.close_week())
+    sent, final = len(notifier.sent), store.rankings[("s1", "2026-W48")]
+
+    # Repetição alguns minutos depois (ex.: a tarefa tentou de novo).
+    moment.now += timedelta(minutes=10)
+    riot.league["p-b"] = league("GOLD", "IV", 50)  # jogou nesse meio-tempo
+    run(service.close_week())
+
+    assert len(notifier.sent) == sent  # sem aviso repetido
+    assert store.rankings[("s1", "2026-W48")] == final
+    # O ponto de partida da semana nova continua o de 00h, e não o de agora.
+    assert store.snapshots["2026-W49"]["p-b"].entry.lp == 30  # type: ignore[union-attr]
+
+
 def test_semana_sem_ganho_nao_tem_destaque(
     service: RankingService, notifier: FakeNotifier, riot: FakeRiot, moment: Moment, brabos: Squad,
 ) -> None:

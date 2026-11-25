@@ -1,0 +1,22 @@
+# Blueprint do Render (render.com): o proxy no plano gratuito.
+# Render → New → Blueprint → este repositório. Passo a passo em docs/deploy.md.
+services:
+  - type: web
+    name: elo-squad-proxy
+    runtime: docker
+    plan: free
+    region: virginia # a mais perto do Brasil no plano gratuito (e da Riot "americas")
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    # Só publica de novo quando o backend muda.
+    buildFilter:
+      paths:
+        - backend/**
+    envVars:
+      - key: RIOT_API_KEY
+        sync: false # preenchido no painel (troca diária da dev key)
+      - key: JOBS_SECRET
+        sync: false # o mesmo valor vai no segredo JOBS_SECRET do GitHub
+      - key: FIREBASE_CREDENTIALS_FILE
+        value: /etc/secrets/firebase-sa.json # Secret File do painel

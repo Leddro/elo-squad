@@ -16,9 +16,11 @@ Dio createDio({required String baseUrl, Future<String?> Function()? idToken}) {
       baseUrl: baseUrl,
       // connectTimeout: tempo para ESTABELECER a conexão com o proxy.
       // receiveTimeout: tempo para a resposta CHEGAR depois de conectado.
-      // O proxy faz até 4 chamadas à Riot (em paralelo), então 15s dá folga.
+      // 60s: no plano gratuito do Render, o proxy DORME sem uso e leva uns
+      // 30–60s para acordar (a conexão abre na hora; a resposta é que demora).
+      // O app também acorda o proxy ao abrir (proxyWarmUpProvider).
       connectTimeout: const Duration(seconds: 5),
-      receiveTimeout: const Duration(seconds: 15),
+      receiveTimeout: const Duration(seconds: 60),
       responseType: ResponseType.json,
     ),
   );

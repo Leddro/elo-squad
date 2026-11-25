@@ -104,7 +104,12 @@ class RankingService:
         return len(squads)
 
     async def close_week(self) -> int:
-        """Fecha a semana que acabou e abre a nova. Devolve quantos squads."""
+        """Fecha a semana que acabou e abre a nova. Devolve quantos squads.
+
+        Pode rodar de novo sem estragos (a tarefa agendada tenta outra vez se
+        a resposta não chegar): squad já fechado é pulado, e o ponto de
+        partida da semana nova não é sobrescrito.
+        """
         now = self._clock()
         last_week_moment = week_start(now) - timedelta(seconds=1)
         last_week = week_id(last_week_moment)
@@ -115,6 +120,8 @@ class RankingService:
 
         for squad_id, squad in squads:
             previous = await self._store.get_ranking(squad_id, last_week)
+            if previous is not None and previous.final:
+                continue  # já fechado (e o destaque já avisado)
             ranking = WeeklyRanking(
                 week_id=last_week, week_start=week_start(last_week_moment), updated_at=now, final=True,
                 entries=build_entries(squad, starts, self._with_fallback(fetched, previous, squad)),
@@ -123,9 +130,12 @@ class RankingService:
             await self._notify_winner(squad_id, squad, ranking)
 
         # O elo de agora é o ponto de partida da semana nova.
-        await self._store.save_snapshots(week_id(now), {
+        new_week = week_id(now)
+        taken = await self._store.get_snapshots(new_week, list(fetched.current))
+        await self._store.save_snapshots(new_week, {
             puuid: RankSnapshot(entry=entry, taken_at=now)
-            for puuid, entry in fetched.current.items() if puuid not in fetched.failed
+            for puuid, entry in fetched.current.items()
+            if puuid not in fetched.failed and puuid not in taken
         })
         return len(squads)
 
