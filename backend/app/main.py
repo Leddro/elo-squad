@@ -5,6 +5,7 @@ Documentação interativa:     http://127.0.0.1:8000/docs
 """
 
 import logging
+import os
 import secrets
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -96,6 +97,10 @@ class _UnavailableStore:
 
 
 def _firebase(settings: Settings) -> tuple[object, Store, Notifier]:
+    if "K_SERVICE" not in os.environ:  # fora do Cloud Run (ex.: no PC)
+        # Não procurar o servidor de metadados do Google Cloud: sem ele, a
+        # busca pela credencial demora ~20 s antes de desistir.
+        os.environ.setdefault("NO_GCE_CHECK", "true")
     import firebase_admin
     from firebase_admin import firestore_async
     from google.auth.exceptions import DefaultCredentialsError

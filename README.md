@@ -5,7 +5,7 @@
 
 App Flutter para acompanhar o elo, o histórico de partidas e os campeões mais jogados de um grupo de amigos, com um ranking semanal entre eles. Também tem suporte a TFT.
 
-> 🚧 Em desenvolvimento. Fase 1 (busca de invocador) concluída; próxima: histórico de partidas.
+> 🚧 Em desenvolvimento. Fases 1 e 2 concluídas; fase 3 (squads, ranking semanal e notificações) implementada, aguardando a publicação do proxy.
 
 ## Stack
 
@@ -61,6 +61,8 @@ flutter pub get
 dart run build_runner build       # gera *.g.dart e *.freezed.dart
 flutter test                      # 172 testes
 ```
+
+**Publicar o proxy** (Cloud Run + Cloud Scheduler): veja [docs/deploy.md](docs/deploy.md).
 
 **Rodar no celular por USB** (com o proxy rodando no PC):
 
