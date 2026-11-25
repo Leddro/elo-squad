@@ -1,4 +1,4 @@
-# Imagem do proxy para o Google Cloud Run.
+# Imagem do proxy (Render e Google Cloud Run).
 # Build na nuvem, sem Docker local:  gcloud run deploy --source backend ...
 
 FROM python:3.15-slim
@@ -18,7 +18,8 @@ RUN uv sync --locked --no-dev --no-install-project
 COPY app ./app
 
 # Cloud Run informa a porta pela variável PORT (8080 por padrão).
-# Sem usuário root dentro do container.
-RUN useradd --create-home proxy
-USER proxy
+# Sem usuário root dentro do container. Não pode se chamar "proxy": esse
+# usuário já existe na imagem base do Debian (useradd sai com código 9).
+RUN useradd --create-home elosquad
+USER elosquad
 CMD ["sh", "-c", "exec /app/.venv/bin/uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8080}"]
