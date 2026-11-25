@@ -1,21 +1,20 @@
+import 'package:freezed_annotation/freezed_annotation.dart';
+
+part 'mastery.freezed.dart';
+
 /// Maestria do jogador com um campeão.
-final class Mastery {
-  const Mastery({
-    required this.championId,
-    required this.championName,
-    required this.championIconUrl,
-    required this.level,
-    required this.points,
-  });
+@freezed
+abstract class Mastery with _$Mastery {
+  const factory Mastery({
+    required int championId,
 
-  final int championId;
+    /// `null` se o proxy não conseguiu resolver (campeão recém-lançado ou
+    /// Data Dragon fora do ar): a tela mostra um placeholder.
+    required String? championName,
+    required String? championIconUrl,
 
-  /// `null` se o proxy não conseguiu resolver (campeão recém-lançado ou
-  /// Data Dragon fora do ar): a tela mostra um placeholder.
-  final String? championName;
-  final String? championIconUrl;
-
-  /// Sem teto: desde 2024 a maestria passa do nível 7.
-  final int level;
-  final int points;
+    /// Sem teto: desde 2024 a maestria passa do nível 7.
+    required int level,
+    required int points,
+  }) = _Mastery;
 }

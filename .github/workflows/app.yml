@@ -50,7 +50,13 @@ jobs:
 
       - name: Conferir formatação
         # --set-exit-if-changed: falha se algum arquivo NÃO estiver formatado.
+        # Roda ANTES da geração: só confere o código escrito à mão.
         run: dart format --output=none --set-exit-if-changed lib test
+
+      - name: Gerar código (freezed, json_serializable)
+        # Os arquivos *.g.dart e *.freezed.dart não são versionados: o CI
+        # gera do zero, então um gerado desatualizado nunca passa despercebido.
+        run: dart run build_runner build --delete-conflicting-outputs
 
       - name: Análise estática
         run: flutter analyze

@@ -58,7 +58,8 @@ uv run fastapi dev app/main.py    # http://127.0.0.1:8000/docs
 # App (em outro terminal)
 cd app
 flutter pub get
-flutter test                      # 75 testes
+dart run build_runner build --delete-conflicting-outputs   # gera *.g.dart e *.freezed.dart
+flutter test                      # 83 testes
 ```
 
 **Rodar no celular por USB** (com o proxy rodando no PC):

@@ -1,30 +1,33 @@
+import 'package:freezed_annotation/freezed_annotation.dart';
+
 import 'tier.dart';
+
+// O código gerado (==, hashCode, copyWith, toString) vai para este arquivo.
+part 'ranked.freezed.dart';
 
 /// As filas ranqueadas de um jogador.
 ///
 /// `null` em [solo] ou [flex] = sem ranque nessa fila (dado real, não falha).
-final class Ranked {
-  const Ranked({this.solo, this.flex});
-
-  final RankedEntry? solo;
-  final RankedEntry? flex;
+@freezed
+abstract class Ranked with _$Ranked {
+  const factory Ranked({RankedEntry? solo, RankedEntry? flex}) = _Ranked;
 }
 
 /// Situação do jogador em uma fila.
-final class RankedEntry {
-  const RankedEntry({
-    required this.tier,
-    required this.division,
-    required this.lp,
-    required this.wins,
-    required this.losses,
-  });
+@freezed
+abstract class RankedEntry with _$RankedEntry {
+  // Construtor privado vazio: necessário para a classe ter getters próprios.
+  // Com ele, o código gerado ESTENDE esta classe (herda os getters) em vez de
+  // só implementá-la.
+  const RankedEntry._();
 
-  final Tier tier;
-  final Division division;
-  final int lp;
-  final int wins;
-  final int losses;
+  const factory RankedEntry({
+    required Tier tier,
+    required Division division,
+    required int lp,
+    required int wins,
+    required int losses,
+  }) = _RankedEntry;
 
   /// Regra de negócio derivada: não vem da API, é calculada aqui.
   int get games => wins + losses;

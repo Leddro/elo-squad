@@ -13,6 +13,9 @@ analyzer:
   exclude:
     - build/**
     - android/**
+    # Código gerado pelo build_runner (freezed, json_serializable, drift).
+    - "**/*.g.dart"
+    - "**/*.freezed.dart"
 
 linter:
   # The lint rules applied to this project can be customized in the

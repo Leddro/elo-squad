@@ -1,0 +1,10 @@
+# Configuração dos geradores de código (build_runner).
+targets:
+  $default:
+    builders:
+      json_serializable:
+        options:
+          # toJson() também converte os objetos ANINHADOS em Map (e não só o
+          # de fora). Sem isso, fromJson(dto.toJson()) quebraria nos campos
+          # que são outros DTOs.
+          explicit_to_json: true

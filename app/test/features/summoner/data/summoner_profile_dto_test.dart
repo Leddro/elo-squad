@@ -11,6 +11,26 @@ void main() {
 
   setUp(() => json = loadFixture('summoner_profile.json'));
 
+  test('ida e volta: fromJson(dto.toJson()) reconstrói o mesmo DTO', () {
+    // Vai importar no cache offline: o que for salvo como JSON tem de voltar igual.
+    final dto = SummonerProfileDto.fromJson(json);
+
+    expect(SummonerProfileDto.fromJson(dto.toJson()), dto);
+  });
+
+  test('o JSON gerado usa os mesmos nomes de campo do proxy (camelCase)', () {
+    final gerado = SummonerProfileDto.fromJson(json).toJson();
+
+    expect(
+      gerado.keys,
+      containsAll(['riotId', 'profileIconUrl', 'topMasteries', 'fetchedAt']),
+    );
+    expect(
+      (gerado['riotId'] as Map)['gameName'],
+      'Fulano',
+    ); // aninhado virou Map
+  });
+
   test('JSON completo → entidade com enums e datas convertidos', () {
     final profile = SummonerProfileDto.fromJson(json).toEntity();
 
