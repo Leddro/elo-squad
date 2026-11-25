@@ -55,7 +55,14 @@ class FailureView extends StatelessWidget {
         message: 'Os servidores da Riot não responderam. Tente em instantes.',
         canRetry: true,
       ),
-      UnexpectedFailure() => (
+      UnauthenticatedFailure() => (
+        illustration: const _IconIllustration(Icons.lock_clock),
+        title: 'Sessão expirada',
+        message: 'Saia e entre de novo com a sua conta Google.',
+        canRetry: true,
+      ),
+      // Não acontece na busca de perfil, mas o switch exige tratar.
+      SquadFailure() || UnexpectedFailure() => (
         illustration: const _IconIllustration(Icons.error_outline),
         title: 'Algo deu errado',
         message: 'Tente de novo. Se continuar, avise no grupo.',

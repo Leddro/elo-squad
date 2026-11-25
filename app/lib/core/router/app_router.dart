@@ -5,6 +5,9 @@ import 'package:material_ui/material_ui.dart';
 import '../../features/auth/data/auth_providers.dart';
 import '../../features/auth/domain/entities/app_user.dart';
 import '../../features/auth/presentation/pages/login_page.dart';
+import '../../features/squads/presentation/pages/link_riot_id_page.dart';
+import '../../features/squads/presentation/pages/squad_detail_page.dart';
+import '../../features/squads/presentation/pages/squads_page.dart';
 import '../../features/summoner/domain/entities/riot_id.dart';
 import '../../features/summoner/presentation/pages/home_page.dart';
 import '../../features/summoner/presentation/pages/profile_page.dart';
@@ -15,7 +18,12 @@ abstract final class Routes {
   static const login = 'login';
   static const home = 'home';
   static const profile = 'profile';
+  static const squads = 'squads';
+  static const squad = 'squad';
+  static const linkRiotId = 'linkRiotId';
 }
+
+final _rootKey = GlobalKey<NavigatorState>(debugLabel: 'root');
 
 /// O roteador do app. Sem usuário logado, toda rota leva ao login.
 final routerProvider = Provider<GoRouter>((ref) {
@@ -30,6 +38,7 @@ final routerProvider = Provider<GoRouter>((ref) {
     ..onDispose(authState.dispose);
 
   final router = GoRouter(
+    navigatorKey: _rootKey,
     initialLocation: '/',
     refreshListenable: authState,
     redirect: (context, state) {
@@ -55,20 +64,54 @@ final routerProvider = Provider<GoRouter>((ref) {
         name: Routes.login,
         builder: (_, _) => const LoginPage(),
       ),
+      // Telas por cima das abas (sem a barra inferior), abertas de qualquer aba.
       GoRoute(
-        path: '/',
-        name: Routes.home,
-        builder: (_, _) => const HomePage(),
-        routes: [
-          GoRoute(
-            path: 'profile/:gameName/:tagLine',
-            name: Routes.profile,
-            builder: (_, state) => ProfilePage(
-              riotId: RiotId(
-                state.pathParameters['gameName']!,
-                state.pathParameters['tagLine']!,
+        path: '/profile/:gameName/:tagLine',
+        name: Routes.profile,
+        parentNavigatorKey: _rootKey,
+        builder: (_, state) => ProfilePage(
+          riotId: RiotId(
+            state.pathParameters['gameName']!,
+            state.pathParameters['tagLine']!,
+          ),
+        ),
+      ),
+      GoRoute(
+        path: '/link-riot-id',
+        name: Routes.linkRiotId,
+        parentNavigatorKey: _rootKey,
+        builder: (_, _) => const LinkRiotIdPage(),
+      ),
+      // As abas: cada uma guarda a própria pilha de navegação.
+      StatefulShellRoute.indexedStack(
+        builder: (_, _, shell) => _ScaffoldWithNavBar(shell: shell),
+        branches: [
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/',
+                name: Routes.home,
+                builder: (_, _) => const HomePage(),
               ),
-            ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/squads',
+                name: Routes.squads,
+                builder: (_, _) => const SquadsPage(),
+                routes: [
+                  GoRoute(
+                    path: ':squadId',
+                    name: Routes.squad,
+                    builder: (_, state) => SquadDetailPage(
+                      squadId: state.pathParameters['squadId']!,
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
         ],
       ),
@@ -77,6 +120,27 @@ final routerProvider = Provider<GoRouter>((ref) {
   ref.onDispose(router.dispose);
   return router;
 });
+
+class _ScaffoldWithNavBar extends StatelessWidget {
+  const _ScaffoldWithNavBar({required this.shell});
+
+  final StatefulNavigationShell shell;
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    body: shell,
+    bottomNavigationBar: NavigationBar(
+      selectedIndex: shell.currentIndex,
+      // Tocar de novo na aba atual volta ao início dela.
+      onDestinationSelected: (index) =>
+          shell.goBranch(index, initialLocation: index == shell.currentIndex),
+      destinations: const [
+        NavigationDestination(icon: Icon(Icons.search), label: 'Buscar'),
+        NavigationDestination(icon: Icon(Icons.groups), label: 'Squads'),
+      ],
+    ),
+  );
+}
 
 class _SplashPage extends StatelessWidget {
   const _SplashPage();

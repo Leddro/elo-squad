@@ -12,4 +12,12 @@ abstract final class ApiConfig {
     'API_BASE_URL',
     defaultValue: 'http://10.0.2.2:8000',
   );
+
+  /// `--dart-define=FIRESTORE_EMULATOR=true`: o app lê o Firestore do
+  /// EMULADOR (porta 8080, no mesmo host do proxy) em vez do de produção.
+  static const useFirestoreEmulator = bool.fromEnvironment(
+    'FIRESTORE_EMULATOR',
+  );
+
+  static String get host => Uri.parse(baseUrl).host;
 }

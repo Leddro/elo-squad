@@ -52,14 +52,14 @@ cd elo-squad
 cd backend
 copy .env.example .env            # edite e cole a RIOT_API_KEY
 uv sync
-uv run python -m pytest           # 27 testes
+uv run python -m pytest           # 47 testes
 uv run fastapi dev app/main.py    # http://127.0.0.1:8000/docs
 
 # App (em outro terminal)
 cd app
 flutter pub get
 dart run build_runner build       # gera *.g.dart e *.freezed.dart
-flutter test                      # 136 testes
+flutter test                      # 163 testes
 ```
 
 **Rodar no celular por USB** (com o proxy rodando no PC):

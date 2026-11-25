@@ -46,6 +46,36 @@ final class UpstreamUnavailableFailure extends Failure {
   const UpstreamUnavailableFailure();
 }
 
+/// O proxy não aceitou o login (token ausente ou expirado): entrar de novo.
+final class UnauthenticatedFailure extends Failure {
+  const UnauthenticatedFailure();
+}
+
+/// Por que o proxy recusou uma ação de squad.
+enum SquadProblem {
+  /// O usuário ainda não vinculou o Riot ID.
+  riotIdRequired,
+
+  /// Código de convite inválido, ou squad do qual ele não faz parte.
+  notFound,
+
+  /// O squad já tem o máximo de membros.
+  full,
+
+  /// O usuário já está no máximo de squads.
+  limit,
+}
+
+/// Uma regra dos squads impediu a ação. Tentar de novo não adianta.
+final class SquadFailure extends Failure {
+  const SquadFailure(this.problem);
+
+  final SquadProblem problem;
+
+  @override
+  String toString() => 'SquadFailure(${problem.name})';
+}
+
 /// Qualquer coisa fora do previsto (resposta em formato errado, bug...).
 /// [cause] guarda o erro original para log/debug.
 final class UnexpectedFailure extends Failure {

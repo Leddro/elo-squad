@@ -112,4 +112,31 @@ void main() {
       expect(failure, isA<UnexpectedFailure>());
     });
   });
+
+  group('fase 3: login e squads', () {
+    const casos = {
+      'RIOT_ID_REQUIRED': SquadProblem.riotIdRequired,
+      'SQUAD_NOT_FOUND': SquadProblem.notFound,
+      'SQUAD_FULL': SquadProblem.full,
+      'SQUAD_LIMIT': SquadProblem.limit,
+    };
+    for (final MapEntry(key: code, value: problem) in casos.entries) {
+      test('$code → SquadFailure(${problem.name})', () {
+        final failure = failureFromDioException(
+          _response(409, {'code': code, 'message': '...'}),
+        );
+        expect(failure, isA<SquadFailure>());
+        expect((failure as SquadFailure).problem, problem);
+      });
+    }
+
+    test('401 UNAUTHENTICATED → UnauthenticatedFailure', () {
+      expect(
+        failureFromDioException(
+          _response(401, {'code': 'UNAUTHENTICATED', 'message': '...'}),
+        ),
+        isA<UnauthenticatedFailure>(),
+      );
+    });
+  });
 }

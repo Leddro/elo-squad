@@ -55,6 +55,8 @@ final class SummonerRepositoryImpl implements SummonerRepository {
     // o perfil antigo seria mentir. E um erro inesperado (bug) não deve ser
     // escondido atrás do cache.
     NotFoundFailure() || UnexpectedFailure() => false,
+    // Sessão expirada e regras de squad não têm a ver com o perfil em cache.
+    UnauthenticatedFailure() || SquadFailure() => false,
   };
 
   /// Uma cópia corrompida (ou que não vira mais entidade) não pode trocar o

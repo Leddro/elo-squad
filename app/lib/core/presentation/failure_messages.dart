@@ -11,7 +11,14 @@ String shortFailureMessage(Object error) {
     RateLimitedFailure(:final retryAfter) =>
       'Muitas requisições. Aguarde ${retryAfter.inSeconds}s.',
     UpstreamUnavailableFailure() => 'Os servidores da Riot não responderam.',
-    NotFoundFailure() => 'Histórico não encontrado.',
+    NotFoundFailure() => 'Não encontrado.',
+    UnauthenticatedFailure() => 'Sua sessão expirou. Entre de novo.',
+    SquadFailure(:final problem) => switch (problem) {
+      SquadProblem.riotIdRequired => 'Vincule o seu Riot ID primeiro.',
+      SquadProblem.notFound => 'Código de convite inválido.',
+      SquadProblem.full => 'Este squad já está cheio.',
+      SquadProblem.limit => 'Você já está no número máximo de squads.',
+    },
     UnexpectedFailure() => 'Algo deu errado.',
   };
 }

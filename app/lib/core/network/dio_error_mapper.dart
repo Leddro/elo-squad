@@ -41,6 +41,11 @@ Failure _fromResponse(Response<dynamic>? response) {
     'SUMMONER_NOT_FOUND' => const NotFoundFailure(),
     'RATE_LIMITED' => RateLimitedFailure(retryAfter: _retryAfter(response)),
     'UPSTREAM_UNAVAILABLE' => const UpstreamUnavailableFailure(),
+    'UNAUTHENTICATED' => const UnauthenticatedFailure(),
+    'RIOT_ID_REQUIRED' => const SquadFailure(SquadProblem.riotIdRequired),
+    'SQUAD_NOT_FOUND' => const SquadFailure(SquadProblem.notFound),
+    'SQUAD_FULL' => const SquadFailure(SquadProblem.full),
+    'SQUAD_LIMIT' => const SquadFailure(SquadProblem.limit),
     _ => UnexpectedFailure('HTTP ${response?.statusCode}: $body'),
   };
 }
