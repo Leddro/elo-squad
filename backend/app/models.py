@@ -190,3 +190,30 @@ class SquadRef(CamelModel):
 class FcmTokenRequest(CamelModel):
     token: str = Field(min_length=1, max_length=4096)
 
+
+
+# ---------- Ranking semanal (fase 3) ----------
+
+class RankSnapshot(CamelModel):
+    """O elo Solo/Duo de um jogador num momento. `entry` None = sem ranque."""
+    entry: RankedEntry | None
+    taken_at: datetime
+
+
+class RankingEntry(CamelModel):
+    uid: str
+    display_name: str | None
+    riot_id: RiotId
+    profile_icon_url: str | None
+    current: RankedEntry | None  # elo agora (None = sem ranque)
+    lp_delta: int | None  # PDL ganho na semana (None = sem ranque no começo ou agora)
+    games: int  # partidas ranqueadas Solo/Duo na semana
+
+
+class WeeklyRanking(CamelModel):
+    """Documento squads/{id}/rankings/{weekId}. Entradas do maior para o menor PDL ganho."""
+    week_id: str
+    week_start: datetime
+    updated_at: datetime
+    final: bool  # True quando a semana acabou
+    entries: list[RankingEntry]

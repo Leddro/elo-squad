@@ -10,7 +10,7 @@ from datetime import UTC, datetime
 
 import pytest
 
-from app.models import RiotId, Squad, SquadMember
+from app.models import RankedEntry, RankingEntry, RankSnapshot, RiotId, Squad, SquadMember, WeeklyRanking
 from app.store import FirestoreStore
 
 pytestmark = pytest.mark.skipif(
@@ -63,6 +63,33 @@ async def scenario() -> None:
     assert saved.member_uids == ["b"] and "a" not in saved.members
     assert saved.owner_uid == "b" and saved.members["b"].puuid == "puuid-novo"
     assert (await store.get_user("a")).squad_ids == []  # type: ignore[union-attr]
+
+    # ----- Ranking semanal e notificações -----
+    assert [sid for sid, _ in await store.list_squads()] == [squad_id]
+
+    now = datetime.now(UTC)
+    gold = RankedEntry(tier="GOLD", division="II", lp=54, wins=40, losses=35)
+    await store.save_snapshots("2026-W48", {
+        "puuid-b": RankSnapshot(entry=gold, taken_at=now),
+        "puuid-x": RankSnapshot(entry=None, taken_at=now),  # sem ranque
+    })
+    snaps = await store.get_snapshots("2026-W48", ["puuid-b", "puuid-x", "puuid-nada"])
+    assert set(snaps) == {"puuid-b", "puuid-x"}
+    assert snaps["puuid-b"].entry == gold and snaps["puuid-x"].entry is None
+
+    ranking = WeeklyRanking(
+        week_id="2026-W48", week_start=now, updated_at=now, final=False,
+        entries=[RankingEntry(uid="b", display_name=None, riot_id=RiotId(game_name="F", tag_line="BR1"),
+                              profile_icon_url=None, current=gold, lp_delta=12, games=2)],
+    )
+    await store.save_ranking(squad_id, ranking)
+    assert await store.get_ranking(squad_id, "2026-W48") == ranking
+    assert await store.get_ranking(squad_id, "2026-W01") is None
+
+    await store.add_fcm_token("b", "fcm-b")
+    assert await store.get_fcm_tokens(["a", "b", "ninguem"]) == {"a": ["fcm-1"], "b": ["fcm-b"]}
+    await store.remove_fcm_tokens("a", ["fcm-1"])
+    assert await store.get_fcm_tokens(["a"]) == {}
 
     await store.delete_squad(squad_id, "ABC234")
     assert await store.get_squad(squad_id) is None

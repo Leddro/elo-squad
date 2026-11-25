@@ -19,6 +19,9 @@ class Settings(BaseSettings):
     # Firebase (fase 3). Em produção (Cloud Run) a credencial vem do ambiente;
     # no PC, rode o emulador e defina FIRESTORE_EMULATOR_HOST=127.0.0.1:8080.
     firebase_project_id: str = "elo-squad-app"
+    # Segredo das tarefas agendadas (POST /jobs/...), enviado pelo Cloud Scheduler
+    # no cabeçalho X-Jobs-Secret. Sem ele, as rotas /jobs ficam desligadas.
+    jobs_secret: SecretStr | None = None
 
     ddragon_language: str = "pt_BR"
     top_masteries_count: int = 3

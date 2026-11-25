@@ -5,13 +5,14 @@ Documentação interativa:     http://127.0.0.1:8000/docs
 """
 
 import logging
+import secrets
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from typing import Annotated
 
 import httpx
-from fastapi import Depends, FastAPI, Query, Request, Response
+from fastapi import Depends, FastAPI, Header, Query, Request, Response
 from fastapi.responses import JSONResponse
 
 from app.auth import CurrentUser, FirebaseTokenVerifier, get_current_user
@@ -29,6 +30,7 @@ from app.errors import (
     UpstreamError,
 )
 from app.match_service import MatchService
+from app.notifier import FcmNotifier, NoNotifier, Notifier
 from app.models import (
     CreateSquadRequest,
     ErrorCode,
@@ -41,6 +43,7 @@ from app.models import (
     SquadRef,
     SummonerProfile,
 )
+from app.ranking_service import RankingService
 from app.riot_client import RiotClient
 from app.service import SummonerService
 from app.squad_service import SquadService
@@ -54,10 +57,15 @@ class Services:
     summoner: SummonerService
     matches: MatchService
     squads: SquadService
+    ranking: RankingService
 
 
 def build_services(
-    http: httpx.AsyncClient, settings: Settings, store: Store, cache: TTLCache | None = None,
+    http: httpx.AsyncClient,
+    settings: Settings,
+    store: Store,
+    cache: TTLCache | None = None,
+    notifier: Notifier | None = None,
 ) -> Services:
     """Monta o grafo de objetos. Os testes chamam isto com um http falso.
 
@@ -72,6 +80,7 @@ def build_services(
         summoner=summoner,
         matches=MatchService(riot, ddragon, cache, settings),
         squads=SquadService(store, summoner),
+        ranking=RankingService(store, riot, cache, settings, notifier or NoNotifier()),
     )
 
 
@@ -86,7 +95,7 @@ class _UnavailableStore:
         return unavailable
 
 
-def _firebase(settings: Settings) -> tuple[object, Store]:
+def _firebase(settings: Settings) -> tuple[object, Store, Notifier]:
     import firebase_admin
     from firebase_admin import firestore_async
     from google.auth.exceptions import DefaultCredentialsError
@@ -96,8 +105,8 @@ def _firebase(settings: Settings) -> tuple[object, Store]:
         store: Store = FirestoreStore(firestore_async.client(fb_app))
     except DefaultCredentialsError:
         logger.warning("Firestore sem credencial: rotas de squad desativadas.")
-        store = _UnavailableStore()  # type: ignore[assignment]
-    return fb_app, store
+        return fb_app, _UnavailableStore(), NoNotifier()  # type: ignore[return-value]
+    return fb_app, store, FcmNotifier(store, fb_app)
 
 
 @asynccontextmanager
@@ -106,9 +115,10 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     # (keep-alive) com a Riot em vez de abrir uma nova a cada requisição.
     async with httpx.AsyncClient(timeout=10.0) as http:
         settings = get_settings()
-        fb_app, store = _firebase(settings)
-        app.state.services = build_services(http, settings, store)
+        fb_app, store, notifier = _firebase(settings)
+        app.state.services = build_services(http, settings, store, notifier=notifier)
         app.state.token_verifier = FirebaseTokenVerifier(fb_app)
+        app.state.jobs_secret = settings.jobs_secret.get_secret_value() if settings.jobs_secret else None
         yield
     # Ao sair do `async with`, as conexões são fechadas (servidor desligando).
 
@@ -193,6 +203,35 @@ async def join_squad(body: JoinSquadRequest, user: CurrentUser, services: Servic
 async def leave_squad(squad_id: str, user: CurrentUser, services: ServicesDep) -> Response:
     await services.squads.leave(user, squad_id)
     return Response(status_code=204)
+
+
+# ---------- Tarefas agendadas (Cloud Scheduler) ----------
+
+def get_jobs_secret(request: Request) -> str | None:
+    """Dependência; os testes trocam pelo segredo deles."""
+    return getattr(request.app.state, "jobs_secret", None)
+
+
+async def require_jobs_secret(
+    expected: Annotated[str | None, Depends(get_jobs_secret)],
+    x_jobs_secret: Annotated[str | None, Header()] = None,
+) -> None:
+    # compare_digest: compara em tempo constante (não vaza o segredo pelo tempo).
+    if expected is None or x_jobs_secret is None or not secrets.compare_digest(x_jobs_secret, expected):
+        raise UnauthenticatedError("segredo das tarefas inválido")
+
+
+_JOBS = [Depends(require_jobs_secret)]
+
+
+@app.post("/jobs/refresh-rankings", dependencies=_JOBS, include_in_schema=False)
+async def job_refresh_rankings(services: ServicesDep) -> dict[str, int]:
+    return {"squads": await services.ranking.refresh()}
+
+
+@app.post("/jobs/close-week", dependencies=_JOBS, include_in_schema=False)
+async def job_close_week(services: ServicesDep) -> dict[str, int]:
+    return {"squads": await services.ranking.close_week()}
 
 
 # ---------- Exceções internas → status HTTP + ErrorResponse ----------

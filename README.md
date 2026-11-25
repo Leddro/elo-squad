@@ -52,7 +52,7 @@ cd elo-squad
 cd backend
 copy .env.example .env            # edite e cole a RIOT_API_KEY
 uv sync
-uv run python -m pytest           # 47 testes
+uv run python -m pytest           # 60 testes
 uv run fastapi dev app/main.py    # http://127.0.0.1:8000/docs
 
 # App (em outro terminal)

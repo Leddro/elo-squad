@@ -97,12 +97,19 @@ class FakeRiot:
         self.overrides: dict[str, httpx.Response] = {}
         self.matches: dict[str, dict[str, Any]] = {mid: make_match(mid) for mid in MATCH_IDS}
         self.match_overrides: dict[str, httpx.Response] = {}
+        # Elo por PUUID (league-v4). Quem não estiver aqui recebe o LEAGUE padrão.
+        self.league: dict[str, list[dict[str, Any]] | httpx.Response] = {}
 
     def __call__(self, request: httpx.Request) -> httpx.Response:
         route = next(name for part, name in ROUTES.items() if part in request.url.path)
         self.calls[route] += 1
         if route in self.overrides:
             return self.overrides[route]
+        if route == "league":
+            puuid = request.url.path.rsplit("/", 1)[-1]
+            if puuid in self.league:
+                league = self.league[puuid]
+                return league if isinstance(league, httpx.Response) else httpx.Response(200, json=league)
         if route == "match_ids":
             start, count = int(request.url.params["start"]), int(request.url.params["count"])
             return httpx.Response(200, json=MATCH_IDS[start:start + count])
