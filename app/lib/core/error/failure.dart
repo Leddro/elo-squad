@@ -76,6 +76,34 @@ final class SquadFailure extends Failure {
   String toString() => 'SquadFailure(${problem.name})';
 }
 
+/// Por que o login por e-mail e senha não deu certo.
+enum AuthProblem {
+  /// E-mail ou senha errados (o Firebase não diz qual, de propósito).
+  invalidCredentials,
+
+  /// Já existe uma conta com esse e-mail.
+  emailInUse,
+
+  /// Senha curta demais (mínimo de 6 caracteres).
+  weakPassword,
+
+  /// E-mail em formato inválido.
+  invalidEmail,
+
+  /// Muitas tentativas erradas: o Firebase bloqueou por um tempo.
+  tooManyAttempts,
+}
+
+/// O login ou o cadastro foi recusado. Mudar os dados resolve.
+final class AuthFailure extends Failure {
+  const AuthFailure(this.problem);
+
+  final AuthProblem problem;
+
+  @override
+  String toString() => 'AuthFailure(${problem.name})';
+}
+
 /// Qualquer coisa fora do previsto (resposta em formato errado, bug...).
 /// [cause] guarda o erro original para log/debug.
 final class UnexpectedFailure extends Failure {

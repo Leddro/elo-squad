@@ -19,6 +19,14 @@ String shortFailureMessage(Object error) {
       SquadProblem.full => 'Este squad já está cheio.',
       SquadProblem.limit => 'Você já está no número máximo de squads.',
     },
+    AuthFailure(:final problem) => switch (problem) {
+      AuthProblem.invalidCredentials => 'E-mail ou senha incorretos.',
+      AuthProblem.emailInUse => 'Já existe uma conta com este e-mail.',
+      AuthProblem.weakPassword => 'Senha fraca: use pelo menos 6 caracteres.',
+      AuthProblem.invalidEmail => 'E-mail inválido.',
+      AuthProblem.tooManyAttempts =>
+        'Muitas tentativas. Aguarde um pouco e tente de novo.',
+    },
     UnexpectedFailure() => 'Algo deu errado.',
   };
 }

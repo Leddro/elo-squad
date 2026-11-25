@@ -11,7 +11,7 @@ void main() {
     await pumpApp(tester, auth: FakeAuthRepository());
 
     expect(find.text('Entrar com Google'), findsOneWidget);
-    expect(find.byType(TextField), findsNothing);
+    expect(find.widgetWithText(TextFormField, 'Senha'), findsOneWidget);
   });
 
   testWidgets('logado: abre na busca', (tester) async {

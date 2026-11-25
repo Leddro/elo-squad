@@ -62,7 +62,7 @@ class FailureView extends StatelessWidget {
         canRetry: true,
       ),
       // Não acontece na busca de perfil, mas o switch exige tratar.
-      SquadFailure() || UnexpectedFailure() => (
+      SquadFailure() || AuthFailure() || UnexpectedFailure() => (
         illustration: const _IconIllustration(Icons.error_outline),
         title: 'Algo deu errado',
         message: 'Tente de novo. Se continuar, avise no grupo.',

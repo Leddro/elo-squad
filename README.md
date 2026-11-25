@@ -59,7 +59,7 @@ uv run fastapi dev app/main.py    # http://127.0.0.1:8000/docs
 cd app
 flutter pub get
 dart run build_runner build       # gera *.g.dart e *.freezed.dart
-flutter test                      # 176 testes
+flutter test                      # 188 testes
 ```
 
 **Publicar o proxy** (Cloud Run + Cloud Scheduler): veja [docs/deploy.md](docs/deploy.md).

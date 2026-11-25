@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:elo_squad/core/error/failure.dart';
 import 'package:elo_squad/features/auth/domain/entities/app_user.dart';
 import 'package:elo_squad/features/auth/domain/repositories/auth_repository.dart';
 
@@ -37,6 +38,51 @@ class FakeAuthRepository implements AuthRepository {
     if (ok) _set(testUser);
     return ok;
   }
+
+  /// Contas de e-mail "cadastradas": e-mail → senha.
+  final accounts = <String, String>{};
+  final resetEmails = <String>[];
+
+  @override
+  Future<void> signInWithEmail({
+    required String email,
+    required String password,
+  }) async {
+    if (accounts[email] != password) {
+      throw const AuthFailure(AuthProblem.invalidCredentials);
+    }
+    _set(
+      AppUser(
+        uid: 'uid-$email',
+        displayName: null,
+        email: email,
+        photoUrl: null,
+      ),
+    );
+  }
+
+  @override
+  Future<void> createAccount({
+    required String name,
+    required String email,
+    required String password,
+  }) async {
+    if (accounts.containsKey(email)) {
+      throw const AuthFailure(AuthProblem.emailInUse);
+    }
+    accounts[email] = password;
+    _set(
+      AppUser(
+        uid: 'uid-$email',
+        displayName: name,
+        email: email,
+        photoUrl: null,
+      ),
+    );
+  }
+
+  @override
+  Future<void> sendPasswordReset(String email) async => resetEmails.add(email);
 
   @override
   Future<void> signOut() async {
