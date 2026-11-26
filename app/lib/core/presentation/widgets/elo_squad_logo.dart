@@ -2,18 +2,17 @@ import 'package:material_ui/material_ui.dart';
 
 import '../theme/brand_colors.dart';
 
-/// A logo do app: o squad (três silhuetas) numa moldura hextech, o nome
-/// "ELO SQUAD" e o livro das Ciências. Desenhada em código (vetor), fica
-/// nítida em qualquer tamanho. [width] define o tamanho de tudo.
+/// A logo completa: o brasão com asas, "ELO SQUAD" e o filete com a gema.
+/// Desenhada em código (vetor), fica nítida em qualquer tamanho. [width]
+/// define o tamanho de tudo.
 class EloSquadLogo extends StatelessWidget {
-  const EloSquadLogo({super.key, this.width = 240, this.showBook = true});
+  const EloSquadLogo({super.key, this.width = 240});
 
   final double width;
-  final bool showBook;
 
   @override
   Widget build(BuildContext context) {
-    final u = width / 240; // unidade: tudo foi desenhado numa caixa de 240
+    final u = width / 280; // unidade: tudo foi desenhado numa caixa de 280
     return Semantics(
       label: 'Elo Squad',
       image: true,
@@ -23,15 +22,11 @@ class EloSquadLogo extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              CustomPaint(
-                size: Size(width, 140 * u),
-                painter: _EmblemPainter(),
-              ),
-              _Wordmark(unit: u),
-              if (showBook) ...[
-                SizedBox(height: 6 * u),
-                CustomPaint(size: Size(width, 34 * u), painter: _BookPainter()),
-              ],
+              EloSquadEmblem(size: 200 * u, wings: true),
+              SizedBox(height: 10 * u),
+              _Wordmark(fontSize: 28 * u),
+              SizedBox(height: 10 * u),
+              CustomPaint(size: Size(180 * u, 10 * u), painter: _RulePainter()),
             ],
           ),
         ),
@@ -40,205 +35,119 @@ class EloSquadLogo extends StatelessWidget {
   }
 }
 
-/// "ELO" dourado e "SQUAD" vermelho, inclinados, com contorno escuro.
-class _Wordmark extends StatelessWidget {
-  const _Wordmark({required this.unit});
+/// Só o brasão: o losango dourado, as três lâminas (o squad) e a gema
+/// hextech. Sem as asas, é a versão para ícones e espaços pequenos.
+class EloSquadEmblem extends StatelessWidget {
+  const EloSquadEmblem({super.key, this.size = 48, this.wings = false});
 
-  final double unit;
-
-  Widget _word(String text, double size, Gradient fill) {
-    final style = TextStyle(
-      fontFamily: 'RussoOne',
-      fontSize: size,
-      height: 1,
-      letterSpacing: size * 0.04,
-      decoration: TextDecoration.none,
-    );
-    return Stack(
-      children: [
-        // Contorno: o mesmo texto, só com traço, por baixo.
-        Text(
-          text,
-          style: style.copyWith(
-            foreground: Paint()
-              ..style = PaintingStyle.stroke
-              ..strokeWidth = size * 0.09
-              ..strokeJoin = StrokeJoin.round
-              ..color = BrandColors.void0,
-          ),
-        ),
-        ShaderMask(
-          shaderCallback: fill.createShader,
-          blendMode: BlendMode.srcIn,
-          child: Text(text, style: style.copyWith(color: Colors.white)),
-        ),
-      ],
-    );
-  }
+  final double size;
+  final bool wings;
 
   @override
-  Widget build(BuildContext context) => Transform(
-    alignment: Alignment.center,
-    transform: Matrix4.skewX(-0.18), // itálico "de velocidade"
-    child: Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        _word(
-          'ELO',
-          64 * unit,
-          const LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [BrandColors.goldLight, BrandColors.gold],
-          ),
-        ),
-        SizedBox(height: 2 * unit),
-        _word(
-          'SQUAD',
-          44 * unit,
-          const LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xFFFF5A64), BrandColors.red],
-          ),
-        ),
-      ],
-    ),
+  Widget build(BuildContext context) => CustomPaint(
+    size: Size.square(size),
+    painter: _EmblemPainter(wings: wings),
   );
 }
 
-/// Moldura angular dourada com cortes vermelhos e as três silhuetas.
-class _EmblemPainter extends CustomPainter {
+/// "ELO SQUAD" serifado, dourado metálico, com contorno escuro.
+class _Wordmark extends StatelessWidget {
+  const _Wordmark({required this.fontSize});
+
+  final double fontSize;
+
+  static const _fill = LinearGradient(
+    begin: Alignment.topCenter,
+    end: Alignment.bottomCenter,
+    colors: [
+      Color(0xFFFFF6DF),
+      BrandColors.goldLight,
+      BrandColors.gold,
+      Color(0xFF9C7E44),
+    ],
+    stops: [0, 0.5, 0.52, 1],
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    final style = TextStyle(
+      fontFamily: 'Cardo',
+      fontWeight: FontWeight.w700,
+      fontSize: fontSize,
+      height: 1,
+      letterSpacing: fontSize * 0.18,
+      decoration: TextDecoration.none,
+    );
+    const text = 'ELO SQUAD';
+    return FittedBox(
+      fit: BoxFit.scaleDown,
+      child: Stack(
+        children: [
+          // Contorno: o mesmo texto, só com traço, por baixo.
+          Text(
+            text,
+            style: style.copyWith(
+              foreground: Paint()
+                ..style = PaintingStyle.stroke
+                ..strokeWidth = fontSize * 0.14
+                ..strokeJoin = StrokeJoin.round
+                ..color = BrandColors.void0,
+            ),
+          ),
+          ShaderMask(
+            shaderCallback: _fill.createShader,
+            blendMode: BlendMode.srcIn,
+            child: Text(text, style: style.copyWith(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Filete dourado que some nas pontas, com um losango ciano no meio.
+class _RulePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
-    final u = size.width / 240;
-    canvas.scale(u);
+    final cx = size.width / 2;
+    final cy = size.height / 2;
+    final d = size.height / 2; // meia-diagonal do losango
+    final line = size.height * 0.15;
+    final gap = d * 2;
 
-    // Moldura: um quadrilátero inclinado, aberto em dois cantos.
-    final frame = Path()
-      ..moveTo(62, 22)
-      ..lineTo(188, 10)
-      ..lineTo(176, 116)
-      ..lineTo(48, 132)
-      ..close();
-    canvas.drawPath(
-      frame,
+    void fade(Rect r, {required bool toRight}) => canvas.drawRect(
+      r,
       Paint()
-        ..shader = const RadialGradient(
-          colors: [Color(0xFF13233D), BrandColors.void0],
-        ).createShader(const Rect.fromLTWH(40, 0, 160, 140)),
-    );
-    final gold = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 4
-      ..strokeJoin = StrokeJoin.miter
-      ..shader = const LinearGradient(
-        colors: [BrandColors.goldLight, BrandColors.gold, BrandColors.goldDark],
-      ).createShader(const Rect.fromLTWH(40, 0, 160, 140));
-    // Dois cantos em "L" (topo-esquerda e base-direita), como a moldura do LoL.
-    canvas
-      ..drawPath(
-        Path()
-          ..moveTo(56, 74)
-          ..lineTo(62, 22)
-          ..lineTo(126, 16),
-        gold,
-      )
-      ..drawPath(
-        Path()
-          ..moveTo(182, 64)
-          ..lineTo(176, 116)
-          ..lineTo(112, 124),
-        gold,
-      );
-
-    // Cortes vermelhos nos outros dois cantos.
-    final red = Paint()..color = BrandColors.red;
-    canvas
-      ..drawPath(
-        Path()
-          ..moveTo(150, 12)
-          ..lineTo(194, 6)
-          ..lineTo(184, 70)
-          ..lineTo(178, 70)
-          ..lineTo(186, 14)
-          ..close(),
-        red,
-      )
-      ..drawPath(
-        Path()
-          ..moveTo(42, 136)
-          ..lineTo(90, 130)
-          ..lineTo(48, 132)
-          ..lineTo(54, 76)
-          ..lineTo(48, 76)
-          ..close(),
-        red,
-      );
-
-    // Losango ciano no topo (a "gema" hextech).
-    canvas.drawPath(
-      Path()
-        ..moveTo(124, 8)
-        ..lineTo(130, 14)
-        ..lineTo(124, 20)
-        ..lineTo(118, 14)
-        ..close(),
-      Paint()..color = BrandColors.cyan,
+        ..shader = LinearGradient(
+          colors: toRight
+              ? [BrandColors.gold.withValues(alpha: 0), BrandColors.gold]
+              : [BrandColors.gold, BrandColors.gold.withValues(alpha: 0)],
+        ).createShader(r),
     );
 
-    // O squad: duas silhuetas atrás, uma maior na frente.
-    _person(canvas, const Offset(84, 50), 0.78);
-    _person(canvas, const Offset(156, 50), 0.78);
-    _person(canvas, const Offset(120, 38), 1);
-  }
+    fade(
+      Rect.fromLTRB(0, cy - line / 2, cx - gap, cy + line / 2),
+      toRight: true,
+    );
+    fade(
+      Rect.fromLTRB(cx + gap, cy - line / 2, size.width, cy + line / 2),
+      toRight: false,
+    );
 
-  /// Uma silhueta (cabeça arredondada + tronco em trapézio) com sombra
-  /// vermelha deslocada, como na referência.
-  void _person(Canvas canvas, Offset top, double scale) {
-    Path shape(Offset o) {
-      final s = scale;
-      final head = RRect.fromRectAndRadius(
-        Rect.fromCenter(
-          center: o + Offset(0, 14 * s),
-          width: 30 * s,
-          height: 28 * s,
-        ),
-        Radius.circular(9 * s),
-      );
-      final body = Path()
-        ..moveTo(o.dx - 14 * s, o.dy + 34 * s)
-        ..lineTo(o.dx + 14 * s, o.dy + 34 * s)
-        ..lineTo(o.dx + 30 * s, o.dy + 50 * s)
-        ..lineTo(o.dx + 32 * s, o.dy + 72 * s)
-        ..lineTo(o.dx - 32 * s, o.dy + 72 * s)
-        ..lineTo(o.dx - 30 * s, o.dy + 50 * s)
-        ..close();
-      return Path()
-        ..addRRect(head)
-        ..addPath(body, Offset.zero);
-    }
-
+    final gem = Path()
+      ..moveTo(cx, cy - d)
+      ..lineTo(cx + d, cy)
+      ..lineTo(cx, cy + d)
+      ..lineTo(cx - d, cy)
+      ..close();
     canvas
+      ..drawPath(gem, Paint()..color = BrandColors.cyan)
       ..drawPath(
-        shape(top + const Offset(3, 3)),
-        Paint()..color = BrandColors.redDark,
-      )
-      ..drawPath(
-        shape(top),
-        Paint()
-          ..shader = LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: const [Colors.white, BrandColors.goldLight],
-          ).createShader(Rect.fromLTWH(top.dx - 32, top.dy, 64, 72 * scale)),
-      )
-      ..drawPath(
-        shape(top),
+        gem,
         Paint()
           ..style = PaintingStyle.stroke
-          ..strokeWidth = 2
-          ..color = BrandColors.void0,
+          ..strokeWidth = d * 0.2
+          ..color = BrandColors.gold,
       );
   }
 
@@ -246,77 +155,251 @@ class _EmblemPainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
-/// Livro aberto dourado entre duas linhas vermelhas (as Ciências).
-class _BookPainter extends CustomPainter {
+/// O brasão, desenhado numa caixa de 200x200.
+class _EmblemPainter extends CustomPainter {
+  _EmblemPainter({required this.wings});
+
+  final bool wings;
+
+  static const _goldXL = Color(0xFFFFF6DF);
+  static const _cyanLight = Color(0xFF9EFFF5);
+  static const _cyanDeep = Color(0xFF005A82);
+
+  /// Dourado claro (face iluminada das peças).
+  static Paint _light(Rect r) => Paint()
+    ..shader = const LinearGradient(
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
+      colors: [_goldXL, BrandColors.gold, Color(0xFFA88A4E)],
+      stops: [0, 0.55, 1],
+    ).createShader(r);
+
+  /// Dourado escuro (face na sombra).
+  static Paint _dark(Rect r) => Paint()
+    ..shader = const LinearGradient(
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
+      colors: [BrandColors.gold, BrandColors.goldDark],
+    ).createShader(r);
+
+  static Paint _outline(double width) => Paint()
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = width
+    ..strokeJoin = StrokeJoin.round
+    ..color = BrandColors.void0;
+
+  static Path _poly(List<Offset> pts) => Path()..addPolygon(pts, true);
+
   @override
   void paint(Canvas canvas, Size size) {
-    final u = size.width / 240;
-    canvas.scale(u);
+    canvas.scale(size.width / 200);
 
-    final red = Paint()..color = BrandColors.red;
-    // Linhas que afinam para as pontas.
+    if (wings) _paintWings(canvas);
+
+    // Moldura: losango com fundo azul e borda dourada.
+    final outer = _poly(const [
+      Offset(100, 10),
+      Offset(164, 92),
+      Offset(100, 190),
+      Offset(36, 92),
+    ]);
+    final bounds = outer.getBounds();
     canvas
       ..drawPath(
-        Path()
-          ..moveTo(18, 17)
-          ..lineTo(92, 15)
-          ..lineTo(92, 19)
-          ..close(),
-        red,
+        outer,
+        Paint()
+          ..shader = const RadialGradient(
+            center: Alignment(0, 0.24),
+            radius: 0.6,
+            colors: [Color(0xFF123049), Color(0xFF0B1B2E), BrandColors.void0],
+            stops: [0, 0.6, 1],
+          ).createShader(bounds),
       )
       ..drawPath(
-        Path()
-          ..moveTo(222, 17)
-          ..lineTo(148, 15)
-          ..lineTo(148, 19)
-          ..close(),
-        red,
+        outer,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 5
+          ..strokeJoin = StrokeJoin.miter
+          ..shader = const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              BrandColors.goldLight,
+              BrandColors.gold,
+              BrandColors.goldDark,
+            ],
+            stops: [0, 0.45, 1],
+          ).createShader(bounds),
       );
 
-    // Capa vermelha por trás das páginas.
+    final inner = _poly(const [
+      Offset(100, 24),
+      Offset(152, 92),
+      Offset(100, 174),
+      Offset(48, 92),
+    ]);
     canvas.drawPath(
-      Path()
-        ..moveTo(96, 8)
-        ..lineTo(120, 26)
-        ..lineTo(144, 8)
-        ..lineTo(148, 28)
-        ..lineTo(120, 34)
-        ..lineTo(92, 28)
-        ..close(),
-      Paint()..color = BrandColors.redDark,
+      inner,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.2
+        ..color = BrandColors.goldDark,
     );
 
-    final pages = Paint()
-      ..shader = const LinearGradient(
-        colors: [BrandColors.goldLight, BrandColors.gold],
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-      ).createShader(const Rect.fromLTWH(96, 2, 48, 28));
-    for (final dir in [-1.0, 1.0]) {
-      final page = Path()
-        ..moveTo(120, 28)
-        ..quadraticBezierTo(120 + dir * 10, 4, 120 + dir * 24, 4)
-        ..lineTo(120 + dir * 24, 24)
-        ..quadraticBezierTo(120 + dir * 10, 22, 120, 28)
-        ..close();
-      canvas.drawPath(page, pages);
+    // Entalhes nas pontas de cima e de baixo.
+    final notch = Paint()..color = BrandColors.goldLight;
+    canvas
+      ..drawPath(
+        _poly(const [Offset(94, 10), Offset(100, 18), Offset(106, 10)]),
+        notch,
+      )
+      ..drawPath(
+        _poly(const [Offset(94, 190), Offset(100, 182), Offset(106, 190)]),
+        notch,
+      );
+
+    // Brilho da gema, preso dentro da moldura.
+    canvas
+      ..save()
+      ..clipPath(inner)
+      ..drawCircle(
+        const Offset(100, 142),
+        46,
+        Paint()
+          ..shader = RadialGradient(
+            colors: [
+              BrandColors.cyan.withValues(alpha: 0.75),
+              BrandColors.cyan.withValues(alpha: 0),
+            ],
+          ).createShader(
+            Rect.fromCircle(center: const Offset(100, 142), radius: 46),
+          ),
+      )
+      ..restore();
+
+    // O squad: três lâminas que sobem de uma base comum.
+    _blade(canvas, const Offset(70, 58), const Offset(90, 134), 9);
+    _blade(canvas, const Offset(130, 58), const Offset(110, 134), 9);
+    _blade(canvas, const Offset(100, 36), const Offset(100, 136), 12);
+
+    // Berço que une as lâminas.
+    final cradle = Path()
+      ..moveTo(62, 122)
+      ..quadraticBezierTo(100, 156, 138, 122)
+      ..lineTo(134, 134)
+      ..quadraticBezierTo(100, 166, 66, 134)
+      ..close();
+    canvas
+      ..drawPath(cradle, _dark(cradle.getBounds()))
+      ..drawPath(cradle, _outline(1.4));
+
+    // Gema hextech.
+    final gem = _poly(const [
+      Offset(100, 128),
+      Offset(112, 142),
+      Offset(100, 158),
+      Offset(88, 142),
+    ]);
+    canvas
+      ..drawPath(
+        gem,
+        Paint()
+          ..shader = const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [_cyanLight, BrandColors.cyan, _cyanDeep],
+          ).createShader(gem.getBounds()),
+      )
+      ..drawPath(
+        _poly(const [
+          Offset(100, 128),
+          Offset(112, 142),
+          Offset(100, 144),
+          Offset(88, 142),
+        ]),
+        Paint()..color = Colors.white.withValues(alpha: 0.35),
+      )
+      ..drawPath(
+        gem,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2
+          ..color = BrandColors.goldLight,
+      );
+  }
+
+  /// Lâmina facetada: metade clara, metade escura (efeito de metal).
+  void _blade(Canvas canvas, Offset tip, Offset base, double w) {
+    final dir = base - tip;
+    final normal = Offset(-dir.dy, dir.dx) / dir.distance;
+    final shoulder = tip + dir * 0.55;
+    final left = _poly([
+      tip,
+      shoulder + normal * w,
+      base + normal * (w * 0.45),
+      base,
+    ]);
+    final right = _poly([
+      tip,
+      shoulder - normal * w,
+      base - normal * (w * 0.45),
+      base,
+    ]);
+    final whole = _poly([
+      tip,
+      shoulder + normal * w,
+      base + normal * (w * 0.45),
+      base - normal * (w * 0.45),
+      shoulder - normal * w,
+    ]);
+    canvas
+      ..drawPath(left, _light(left.getBounds()))
+      ..drawPath(right, _dark(right.getBounds()))
+      ..drawPath(whole, _outline(1.6));
+  }
+
+  /// Três penas curvas de cada lado, saindo das pontas do losango.
+  void _paintWings(Canvas canvas) {
+    final feathers = [
+      Path()
+        ..moveTo(40, 92)
+        ..quadraticBezierTo(18, 74, 0, 72)
+        ..quadraticBezierTo(16, 82, 22, 90)
+        ..quadraticBezierTo(30, 96, 40, 100)
+        ..close(),
+      Path()
+        ..moveTo(38, 100)
+        ..quadraticBezierTo(16, 96, 4, 100)
+        ..quadraticBezierTo(20, 104, 26, 108)
+        ..quadraticBezierTo(32, 110, 42, 108)
+        ..close(),
+      Path()
+        ..moveTo(42, 108)
+        ..quadraticBezierTo(24, 116, 14, 126)
+        ..quadraticBezierTo(28, 122, 36, 120)
+        ..quadraticBezierTo(42, 118, 48, 114)
+        ..close(),
+    ];
+    for (final mirrored in [false, true]) {
+      canvas.save();
+      if (mirrored) {
+        canvas
+          ..translate(200, 0)
+          ..scale(-1, 1);
+      }
+      for (var i = 0; i < feathers.length; i++) {
+        final f = feathers[i];
+        final b = f.getBounds();
+        canvas
+          ..drawPath(f, i == 1 ? _dark(b) : _light(b))
+          ..drawPath(f, _outline(1.2));
+      }
+      canvas.restore();
     }
-    // Lombada.
-    canvas.drawLine(
-      const Offset(120, 10),
-      const Offset(120, 28),
-      Paint()
-        ..color = BrandColors.goldDark
-        ..strokeWidth = 1.5,
-    );
-    // Brilho sutil do livro (gema), como uma página "acesa".
-    canvas.drawCircle(
-      const Offset(120, 6),
-      2,
-      Paint()..color = BrandColors.cyan,
-    );
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant _EmblemPainter oldDelegate) =>
+      oldDelegate.wings != wings;
 }
