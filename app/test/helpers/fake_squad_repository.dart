@@ -71,6 +71,12 @@ class FakeSquadRepository implements SquadRepository {
 
   @override
   Future<void> leaveSquad(String squadId) async => leftSquads.add(squadId);
+
+  final iconChanges = <(String, String)>[];
+
+  @override
+  Future<void> setSquadIcon(String squadId, String icon) async =>
+      iconChanges.add((squadId, icon));
 }
 
 const linkedAccount = AccountLink(

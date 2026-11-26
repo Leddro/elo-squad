@@ -31,4 +31,7 @@ abstract interface class SquadRepository {
   Future<String> joinSquad(String inviteCode);
 
   Future<void> leaveSquad(String squadId);
+
+  /// Troca o ícone do squad (qualquer membro pode).
+  Future<void> setSquadIcon(String squadId, String icon);
 }

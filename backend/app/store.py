@@ -45,6 +45,8 @@ class Store(Protocol):
 
     async def set_owner(self, squad_id: str, uid: str) -> None: ...
 
+    async def set_icon(self, squad_id: str, icon: str) -> None: ...
+
     async def delete_squad(self, squad_id: str, invite_code: str) -> None: ...
 
     # ----- Ranking semanal -----
@@ -162,6 +164,9 @@ class FirestoreStore:
 
     async def set_owner(self, squad_id: str, uid: str) -> None:
         await self._squad(squad_id).update({"ownerUid": uid})
+
+    async def set_icon(self, squad_id: str, icon: str) -> None:
+        await self._squad(squad_id).update({"icon": icon})
 
     async def delete_squad(self, squad_id: str, invite_code: str) -> None:
         batch = self._db.batch()

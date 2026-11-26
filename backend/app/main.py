@@ -41,6 +41,7 @@ from app.models import (
     LinkRiotIdRequest,
     LinkRiotIdResponse,
     MatchPage,
+    SquadIconRequest,
     SquadRef,
     SummonerProfile,
 )
@@ -218,6 +219,14 @@ async def join_squad(body: JoinSquadRequest, user: CurrentUser, services: Servic
 @app.post("/squads/{squad_id}/leave", status_code=204, responses=_SQUAD_ERRORS)
 async def leave_squad(squad_id: str, user: CurrentUser, services: ServicesDep) -> Response:
     await services.squads.leave(user, squad_id)
+    return Response(status_code=204)
+
+
+@app.put("/squads/{squad_id}/icon", status_code=204, responses=_SQUAD_ERRORS)
+async def set_squad_icon(
+    squad_id: str, body: SquadIconRequest, user: CurrentUser, services: ServicesDep,
+) -> Response:
+    await services.squads.set_icon(user, squad_id, body.icon)
     return Response(status_code=204)
 
 

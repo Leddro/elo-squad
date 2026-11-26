@@ -21,6 +21,7 @@ abstract class SquadDocDto with _$SquadDocDto {
     required String ownerUid,
     required List<String> memberUids,
     required Map<String, SquadMemberDto> members,
+    String? icon,
   }) = _SquadDocDto;
 
   factory SquadDocDto.fromJson(Json json) => _$SquadDocDtoFromJson(json);
@@ -30,6 +31,7 @@ abstract class SquadDocDto with _$SquadDocDto {
     name: name,
     inviteCode: inviteCode,
     ownerUid: ownerUid,
+    icon: icon,
     // memberUids guarda a ORDEM de entrada; o mapa, os dados de cada um.
     members: [
       for (final uid in memberUids)

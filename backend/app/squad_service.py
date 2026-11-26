@@ -99,6 +99,13 @@ class SquadService:
         if squad.owner_uid == user.uid:
             await self._store.set_owner(squad_id, remaining[0])  # o mais antigo assume
 
+    async def set_icon(self, user: AuthUser, squad_id: str, icon: str) -> None:
+        """Qualquer membro escolhe o ícone (é um grupo de amigos)."""
+        squad = await self._store.get_squad(squad_id)
+        if squad is None or user.uid not in squad.member_uids:
+            raise SquadNotFoundError()
+        await self._store.set_icon(squad_id, icon)
+
     async def _member(self, user: AuthUser) -> tuple[SquadMember, UserRecord]:
         record = await self._store.get_user(user.uid)
         if record is None or record.riot_id is None or record.puuid is None:

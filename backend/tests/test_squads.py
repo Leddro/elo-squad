@@ -232,3 +232,27 @@ def test_token_fcm_muda_de_conta(client: TestClient, store: InMemoryStore) -> No
 
     assert store.users["a"].fcm_tokens == []
     assert store.users["b"].fcm_tokens == ["fcm-1"]
+
+
+# ---------- Ícone ----------
+
+def test_membro_escolhe_o_icone(client: TestClient, store: InMemoryStore) -> None:
+    link(client, "a")
+    ref = create(client, "a")
+    r = client.put(f"/squads/{ref['id']}/icon", json={"icon": "castle"}, headers=auth("a"))
+    assert r.status_code == 204
+    assert store.squads[ref["id"]].icon == "castle"
+
+
+def test_icone_desconhecido_422(client: TestClient) -> None:
+    link(client, "a")
+    ref = create(client, "a")
+    r = client.put(f"/squads/{ref['id']}/icon", json={"icon": "banana"}, headers=auth("a"))
+    assert r.status_code == 422
+
+
+def test_icone_de_squad_alheio_404(client: TestClient) -> None:
+    link(client, "a")
+    ref = create(client, "a")
+    r = client.put(f"/squads/{ref['id']}/icon", json={"icon": "star"}, headers=auth("b"))
+    assert r.status_code == 404

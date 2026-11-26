@@ -1,4 +1,7 @@
-import 'package:elo_squad/features/summoner/data/summoner_data_providers.dart';
+import 'package:elo_squad/features/summoner/presentation/widgets/profile_view.dart';
+
+import '../../../helpers/fake_squad_repository.dart';
+
 import 'package:elo_squad/features/summoner/domain/entities/profile_result.dart';
 import 'package:elo_squad/features/summoner/domain/repositories/summoner_repository.dart';
 import 'package:elo_squad/features/summoner/presentation/pages/home_page.dart';
@@ -25,10 +28,8 @@ void main() {
         .thenAnswer((_) async => ProfileResult(profile: makeProfile()));
   });
 
-  Future<void> pumpHome(WidgetTester tester) => pumpApp(
-    tester,
-    overrides: [summonerRepositoryProvider.overrideWithValue(repository)],
-  );
+  Future<void> pumpHome(WidgetTester tester) =>
+      pumpApp(tester, summoner: repository);
 
   Future<void> search(WidgetTester tester, String text) async {
     await tester.enterText(find.byType(TextField), text);
@@ -73,5 +74,19 @@ void main() {
     // hintText "Fulano#BR1" fica na árvore (invisível) mesmo com o campo cheio.
     final field = tester.widget<TextField>(find.byType(TextField));
     expect(field.controller!.text, 'Fulano#BR1');
+  });
+
+  testWidgets('com Riot ID vinculado, a home mostra o perfil do dono', (
+    tester,
+  ) async {
+    await pumpApp(
+      tester,
+      squads: FakeSquadRepository(account: linkedAccount),
+      summoner: repository,
+    );
+
+    expect(find.byType(ProfileView), findsOneWidget);
+    expect(find.text('Ouro II'), findsOneWidget);
+    expect(find.text('Ver partidas'), findsOneWidget);
   });
 }

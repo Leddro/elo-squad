@@ -151,6 +151,7 @@ class Squad(CamelModel):
     member_uids: list[str]  # para a consulta "meus squads" (array-contains) e as regras
     members: dict[str, SquadMember]  # uid → membro
     created_at: datetime
+    icon: str | None = None  # chave de SQUAD_ICONS; None = inicial do nome
 
 
 class UserRecord(CamelModel):
@@ -179,6 +180,18 @@ class CreateSquadRequest(CamelModel):
 
 class JoinSquadRequest(CamelModel):
     invite_code: str = Field(min_length=4, max_length=12)
+
+
+# Ícones que o app sabe desenhar (o app mapeia cada chave para um desenho).
+SQUAD_ICONS = (
+    "shield", "trophy", "fire", "bolt", "star", "gem",
+    "castle", "rocket", "paw", "medal", "target", "sparkle",
+)
+SquadIcon = Literal[SQUAD_ICONS]  # type: ignore[valid-type]
+
+
+class SquadIconRequest(CamelModel):
+    icon: SquadIcon
 
 
 class SquadRef(CamelModel):

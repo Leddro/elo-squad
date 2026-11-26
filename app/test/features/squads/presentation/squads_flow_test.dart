@@ -1,3 +1,4 @@
+import 'package:elo_squad/features/squads/domain/entities/weekly_ranking.dart';
 import 'package:elo_squad/core/error/failure.dart';
 import 'package:elo_squad/features/squads/presentation/pages/link_riot_id_page.dart';
 import 'package:elo_squad/features/squads/presentation/pages/squad_detail_page.dart';
@@ -80,6 +81,8 @@ void main() {
 
     await tester.tap(find.text('Os Brabos'));
     await pumpFrames(tester);
+    await tester.tap(find.text('Abrir squad'));
+    await pumpFrames(tester);
 
     expect(find.byType(SquadDetailPage), findsOneWidget);
     expect(find.text('ABC234'), findsOneWidget);
@@ -136,6 +139,8 @@ void main() {
     await openSquadsTab(tester, squads);
     await tester.tap(find.text('Os Brabos'));
     await pumpFrames(tester);
+    await tester.tap(find.text('Abrir squad'));
+    await pumpFrames(tester);
 
     await tester.tap(find.byType(PopupMenuButton<void>));
     await pumpFrames(tester);
@@ -147,5 +152,63 @@ void main() {
 
     expect(squads.leftSquads, ['squad-1']);
     expect(find.byType(SquadDetailPage), findsNothing);
+  });
+
+  testWidgets('tocar no squad desce os membros, do líder do ranking', (
+    tester,
+  ) async {
+    final squads = FakeSquadRepository(
+      account: linkedAccount,
+      squads: [makeSquad()],
+    );
+    squads.rankings['squad-1'] = WeeklyRanking(
+      weekId: '2026-W48',
+      weekStart: DateTime.utc(2026, 11, 23),
+      updatedAt: DateTime.now(),
+      isFinal: false,
+      entries: [
+        for (final (uid, name, lp) in [
+          ('uid-2', 'Ciclano', 40),
+          ('uid-1', 'Fulano', -10),
+        ])
+          RankingEntry(
+            uid: uid,
+            displayName: null,
+            riotId: RiotId(name, 'BR1'),
+            profileIconUrl: null,
+            current: null,
+            lpDelta: lp,
+            games: 3,
+          ),
+      ],
+    );
+    await openSquadsTab(tester, squads);
+    expect(find.text('Ciclano#BR1'), findsNothing);
+
+    await tester.tap(find.text('Os Brabos'));
+    await pumpFrames(tester);
+
+    final first = tester.getTopLeft(find.text('Ciclano#BR1'));
+    final second = tester.getTopLeft(find.text('Fulano#BR1'));
+    expect(first.dy, lessThan(second.dy));
+    expect(find.text('+40 PDL'), findsOneWidget);
+    expect(find.text('-10 PDL'), findsOneWidget);
+  });
+
+  testWidgets('escolher o ícone do squad', (tester) async {
+    final squads = FakeSquadRepository(
+      account: linkedAccount,
+      squads: [makeSquad()],
+    );
+    await openSquadsTab(tester, squads);
+    await tester.tap(find.text('Os Brabos'));
+    await pumpFrames(tester);
+
+    await tester.tap(find.text('Ícone'));
+    await pumpFrames(tester);
+    await tester.tap(find.byKey(const ValueKey('icon-castle')));
+    await pumpFrames(tester);
+
+    expect(squads.iconChanges, [('squad-1', 'castle')]);
   });
 }

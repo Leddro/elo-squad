@@ -33,4 +33,9 @@ final class SquadRemoteDataSource {
 
   Future<void> leaveSquad(String squadId) =>
       _dio.post<void>('/squads/${Uri.encodeComponent(squadId)}/leave');
+
+  Future<void> setSquadIcon(String squadId, String icon) => _dio.put<void>(
+    '/squads/${Uri.encodeComponent(squadId)}/icon',
+    data: {'icon': icon},
+  );
 }

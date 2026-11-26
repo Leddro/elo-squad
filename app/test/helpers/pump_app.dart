@@ -5,6 +5,8 @@ import 'package:elo_squad/features/matches/data/match_data_providers.dart';
 import 'package:elo_squad/features/notifications/push_service.dart';
 import 'package:elo_squad/features/sciences/presentation/providers/science_providers.dart';
 import 'package:elo_squad/features/squads/data/squad_data_providers.dart';
+import 'package:elo_squad/features/summoner/data/summoner_data_providers.dart';
+import 'package:elo_squad/features/summoner/domain/repositories/summoner_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart' show Size;
@@ -15,6 +17,7 @@ import 'fake_match_repository.dart';
 import 'fake_push_service.dart';
 import 'fake_science_repository.dart';
 import 'fake_squad_repository.dart';
+import 'fake_summoner_repository.dart';
 
 /// Sobe o APP INTEIRO (roteador incluído) com Firebase, banco e partidas
 /// trocados por fakes. [overrides] acrescenta ou troca outros providers.
@@ -24,6 +27,7 @@ Future<void> pumpApp(
   FakeSquadRepository? squads,
   FakePushService? push,
   FakeScienceRepository? sciences,
+  SummonerRepository? summoner,
   List<Override> overrides = const [],
 }) async {
   // Tela de celular (360x800 lógicos), não a 800x600 padrão do teste.
@@ -42,6 +46,9 @@ Future<void> pumpApp(
         pushServiceProvider.overrideWithValue(push ?? FakePushService()),
         scienceRepositoryProvider.overrideWithValue(
           sciences ?? FakeScienceRepository(),
+        ),
+        summonerRepositoryProvider.overrideWithValue(
+          summoner ?? FakeSummonerRepository(),
         ),
         squadRepositoryProvider.overrideWithValue(
           squads ?? FakeSquadRepository(),

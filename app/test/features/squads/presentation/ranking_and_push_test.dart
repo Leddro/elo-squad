@@ -56,6 +56,8 @@ void main() {
     await pumpFrames(tester);
     await tester.tap(find.text('Os Brabos'));
     await pumpFrames(tester);
+    await tester.tap(find.text('Abrir squad'));
+    await pumpFrames(tester);
   }
 
   testWidgets('ranking da semana: ordem, PDL, partidas e o troféu', (

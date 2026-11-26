@@ -5,7 +5,13 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../../../core/presentation/failure_messages.dart';
 import '../../../../core/presentation/run_action.dart';
+import '../../../../core/presentation/theme/brand_colors.dart';
+import '../../../../core/presentation/widgets/network_avatar.dart';
 import '../../../../core/router/app_router.dart';
+import '../../../summoner/domain/entities/ranked.dart';
+import '../../../summoner/presentation/formatters.dart';
+import '../../domain/entities/weekly_ranking.dart';
+import '../widgets/squad_icon.dart';
 import '../../data/squad_data_providers.dart';
 import '../../domain/entities/squad.dart';
 import '../providers/squad_providers.dart';
@@ -20,14 +26,20 @@ class SquadsPage extends ConsumerWidget {
     final hasRiotId = account.value?.hasRiotId ?? false;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Squads')),
-      floatingActionButton: hasRiotId
-          ? FloatingActionButton.extended(
-              onPressed: () => _showNewSquadSheet(context, ref),
-              icon: const Icon(Icons.group_add),
-              label: const Text('Novo'),
-            )
-          : null,
+      appBar: AppBar(
+        title: const Text('Squads'),
+        actions: [
+          if (hasRiotId)
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: TextButton.icon(
+                onPressed: () => _showNewSquadSheet(context, ref),
+                icon: const Icon(Icons.group_add),
+                label: const Text('Novo'),
+              ),
+            ),
+        ],
+      ),
       body: switch (account) {
         AsyncValue(:final value?) when !value.hasRiotId =>
           const _LinkRiotIdPrompt(),
@@ -191,19 +203,37 @@ class _UpperCaseFormatter extends TextInputFormatter {
   ) => newValue.copyWith(text: newValue.text.toUpperCase());
 }
 
-class _SquadList extends ConsumerWidget {
+class _SquadList extends ConsumerStatefulWidget {
   const _SquadList();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_SquadList> createState() => _SquadListState();
+}
+
+/// Só um squad aberto por vez: tocar em outro fecha o anterior.
+class _SquadListState extends ConsumerState<_SquadList> {
+  String? _expanded;
+
+  @override
+  Widget build(BuildContext context) {
     return switch (ref.watch(mySquadsProvider)) {
       AsyncValue(:final value?) when value.isEmpty => const _Message(
         'Você ainda não está em nenhum squad.\n'
         'Crie um ou entre com o código de um amigo.',
       ),
       AsyncValue(:final value?) => ListView(
-        padding: const EdgeInsets.only(bottom: 88), // espaço do botão "Novo"
-        children: [for (final squad in value) _SquadTile(squad: squad)],
+        padding: const EdgeInsets.fromLTRB(12, 8, 12, 24),
+        children: [
+          for (final squad in value)
+            _SquadCard(
+              key: ValueKey(squad.id),
+              squad: squad,
+              expanded: _expanded == squad.id,
+              onTap: () => setState(
+                () => _expanded = _expanded == squad.id ? null : squad.id,
+              ),
+            ),
+        ],
       ),
       AsyncValue(:final error?) => _Message(shortFailureMessage(error)),
       _ => const Center(child: CircularProgressIndicator()),
@@ -211,27 +241,284 @@ class _SquadList extends ConsumerWidget {
   }
 }
 
-class _SquadTile extends StatelessWidget {
-  const _SquadTile({required this.squad});
+class _SquadCard extends ConsumerWidget {
+  const _SquadCard({
+    super.key,
+    required this.squad,
+    required this.expanded,
+    required this.onTap,
+  });
+
+  final Squad squad;
+  final bool expanded;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final text = Theme.of(context).textTheme;
+    final count = squad.members.length;
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        children: [
+          InkWell(
+            onTap: onTap,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              child: Row(
+                children: [
+                  SquadBadge(squad: squad),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          squad.name,
+                          style: text.titleMedium?.copyWith(fontSize: 16),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          count == 1 ? '1 membro' : '$count membros',
+                          style: text.bodySmall?.copyWith(
+                            color: const Color(0xFFA09B8C),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  AnimatedRotation(
+                    turns: expanded ? 0.5 : 0,
+                    duration: const Duration(milliseconds: 200),
+                    child: const Icon(
+                      Icons.expand_more,
+                      color: BrandColors.gold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          AnimatedSize(
+            duration: const Duration(milliseconds: 250),
+            curve: Curves.easeOut,
+            alignment: Alignment.topCenter,
+            child: expanded
+                ? _SquadMembers(squad: squad)
+                : const SizedBox(width: double.infinity),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Os membros em "cascata": do primeiro do ranking da semana para baixo,
+/// cada um entrando um pouco depois do anterior.
+class _SquadMembers extends ConsumerWidget {
+  const _SquadMembers({required this.squad});
 
   final Squad squad;
 
   @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final ranking = ref.watch(latestRankingProvider(squad.id)).value;
+    final rows = _rows(ranking);
+    return Column(
+      children: [
+        const Divider(height: 1),
+        for (final (index, row) in rows.indexed)
+          _Cascade(
+            index: index,
+            child: _MemberRow(position: index + 1, row: row),
+          ),
+        _Cascade(
+          index: rows.length,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
+            // OverflowBar: lado a lado; se não couber, um embaixo do outro.
+            child: OverflowBar(
+              alignment: MainAxisAlignment.spaceBetween,
+              overflowAlignment: OverflowBarAlignment.end,
+              children: [
+                TextButton.icon(
+                  onPressed: () => _changeIcon(context, ref),
+                  icon: const Icon(Icons.palette_outlined, size: 18),
+                  label: const Text('Ícone'),
+                ),
+                TextButton.icon(
+                  onPressed: () => context.pushNamed(
+                    Routes.squad,
+                    pathParameters: {'squadId': squad.id},
+                  ),
+                  icon: const Icon(Icons.open_in_new, size: 18),
+                  label: const Text('Abrir squad'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Quem está na frente no ranking vem primeiro. Sem ranking ainda, a
+  /// ordem de entrada no squad.
+  List<_Row> _rows(WeeklyRanking? ranking) {
+    final byUid = {for (final m in squad.members) m.uid: m};
+    if (ranking == null) {
+      return [for (final m in squad.members) _Row(m)];
+    }
+    final ranked = [
+      for (final e in ranking.entries)
+        if (byUid.containsKey(e.uid)) _Row(byUid[e.uid]!, e.current, e.lpDelta),
+    ];
+    final seen = {for (final r in ranked) r.member.uid};
+    return [
+      ...ranked,
+      for (final m in squad.members)
+        if (!seen.contains(m.uid)) _Row(m),
+    ];
+  }
+
+  Future<void> _changeIcon(BuildContext context, WidgetRef ref) async {
+    final icon = await pickSquadIcon(context, current: squad.icon);
+    if (icon == null || !context.mounted) return;
+    await runAction(
+      context,
+      () => ref.read(squadRepositoryProvider).setSquadIcon(squad.id, icon),
+    );
+  }
+}
+
+/// Uma linha da cascata: o membro e, se houver ranking, o elo e o PDL.
+class _Row {
+  const _Row(this.member, [this.current, this.lpDelta]);
+
+  final SquadMember member;
+  final RankedEntry? current;
+  final int? lpDelta;
+}
+
+class _MemberRow extends StatelessWidget {
+  const _MemberRow({required this.position, required this.row});
+
+  final int position;
+  final _Row row;
+
+  @override
   Widget build(BuildContext context) {
-    final count = squad.members.length;
-    return ListTile(
-      leading: CircleAvatar(
-        child: Text(squad.name.characters.first.toUpperCase()),
-      ),
-      title: Text(squad.name),
-      subtitle: Text(count == 1 ? '1 membro' : '$count membros'),
-      trailing: const Icon(Icons.chevron_right),
+    final text = Theme.of(context).textTheme;
+    final _Row(:member, :current, lpDelta: delta) = row;
+    return InkWell(
       onTap: () => context.pushNamed(
-        Routes.squad,
-        pathParameters: {'squadId': squad.id},
+        Routes.profile,
+        pathParameters: {
+          'gameName': member.riotId.gameName,
+          'tagLine': member.riotId.tagLine,
+        },
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 26,
+              child: Text(
+                '$positionº',
+                style: text.labelLarge?.copyWith(color: BrandColors.gold),
+              ),
+            ),
+            NetworkAvatar(url: member.profileIconUrl, size: 32),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    member.riotId.toString(),
+                    style: text.bodyMedium,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  if (current != null)
+                    Text(
+                      rankLabel(current),
+                      style: text.bodySmall?.copyWith(
+                        color: const Color(0xFFA09B8C),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            if (delta != null)
+              Text(
+                '${delta > 0 ? '+' : ''}$delta PDL',
+                style: text.labelLarge?.copyWith(
+                  color: delta > 0
+                      ? BrandColors.cyan
+                      : delta < 0
+                      ? BrandColors.red
+                      : null,
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
+}
+
+/// Entra deslizando de cima e aparecendo, com atraso pela posição.
+class _Cascade extends StatefulWidget {
+  const _Cascade({required this.index, required this.child});
+
+  final int index;
+  final Widget child;
+
+  @override
+  State<_Cascade> createState() => _CascadeState();
+}
+
+class _CascadeState extends State<_Cascade>
+    with SingleTickerProviderStateMixin {
+  late final _controller = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 260),
+  );
+  late final _curve = CurvedAnimation(
+    parent: _controller,
+    curve: Curves.easeOutCubic,
+  );
+
+  @override
+  void initState() {
+    super.initState();
+    Future<void>.delayed(Duration(milliseconds: 70 * widget.index), () {
+      if (mounted) _controller.forward();
+    });
+  }
+
+  @override
+  void dispose() {
+    _curve.dispose();
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => FadeTransition(
+    opacity: _curve,
+    child: SlideTransition(
+      position: Tween(
+        begin: const Offset(0, -0.4),
+        end: Offset.zero,
+      ).animate(_curve),
+      child: widget.child,
+    ),
+  );
 }
 
 class _LinkRiotIdPrompt extends StatelessWidget {
