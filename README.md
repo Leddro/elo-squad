@@ -59,7 +59,7 @@ uv run fastapi dev app/main.py    # http://127.0.0.1:8000/docs
 cd app
 flutter pub get
 dart run build_runner build       # gera *.g.dart e *.freezed.dart
-flutter test                      # 188 testes
+flutter test                      # 194 testes
 ```
 
 **Rodar no PC ou publicar o proxy** (Render gratuito + GitHub Actions): veja [docs/deploy.md](docs/deploy.md).

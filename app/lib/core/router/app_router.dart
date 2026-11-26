@@ -5,6 +5,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../features/auth/data/auth_providers.dart';
 import '../../features/auth/domain/entities/app_user.dart';
 import '../../features/auth/presentation/pages/login_page.dart';
+import '../../features/sciences/presentation/pages/sciences_page.dart';
 import '../../features/squads/presentation/pages/link_riot_id_page.dart';
 import '../../features/squads/presentation/pages/squad_detail_page.dart';
 import '../../features/squads/presentation/pages/squads_page.dart';
@@ -18,6 +19,7 @@ abstract final class Routes {
   static const login = 'login';
   static const home = 'home';
   static const profile = 'profile';
+  static const sciences = 'sciences';
   static const squads = 'squads';
   static const squad = 'squad';
   static const linkRiotId = 'linkRiotId';
@@ -98,6 +100,15 @@ final routerProvider = Provider<GoRouter>((ref) {
           StatefulShellBranch(
             routes: [
               GoRoute(
+                path: '/sciences',
+                name: Routes.sciences,
+                builder: (_, _) => const SciencesPage(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
                 path: '/squads',
                 name: Routes.squads,
                 builder: (_, _) => const SquadsPage(),
@@ -136,6 +147,11 @@ class _ScaffoldWithNavBar extends StatelessWidget {
           shell.goBranch(index, initialLocation: index == shell.currentIndex),
       destinations: const [
         NavigationDestination(icon: Icon(Icons.search), label: 'Buscar'),
+        NavigationDestination(
+          icon: Icon(Icons.science_outlined),
+          selectedIcon: Icon(Icons.science),
+          label: 'Ciências',
+        ),
         NavigationDestination(icon: Icon(Icons.groups), label: 'Squads'),
       ],
     ),
