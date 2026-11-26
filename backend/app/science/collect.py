@@ -242,20 +242,23 @@ async def run(
     start = max(cursor or now - FIRST_LOOKBACK, now - MAX_LOOKBACK)
     start_time = int(start.timestamp())
 
+    def discovery_over() -> bool:
+        return deadline.passed(DISCOVERY_SHARE, seconds)
+
+    async def region_job(region: str, region_platforms: list[str]) -> None:
+        # Cada região começa a ler partidas assim que as SUAS plataformas
+        # terminam a busca de monochamps (sem esperar as outras regiões).
+        found = await asyncio.gather(*(_discover(riot, store, p, now, discovery_over) for p in region_platforms))
+        players = [m for group in found for m in group]
+        report.monochamps += len(players)
+        random.shuffle(players)  # sem tempo para todos: amostra justa entre plataformas
+        await _harvest(riot, region, players, start_time, agg, catalog, report, deadline.passed)
+
+    by_region: dict[str, list[str]] = {}
+    for platform, region in platforms.items():
+        by_region.setdefault(region, []).append(platform)
     try:
-        discovered = await asyncio.gather(*(
-            _discover(riot, store, p, now, lambda: deadline.passed(DISCOVERY_SHARE, seconds)) for p in platforms
-        ))
-        by_region: dict[str, list[Monochamp]] = {}
-        for platform, players in zip(platforms, discovered, strict=True):
-            by_region.setdefault(platforms[platform], []).extend(players)
-            report.monochamps += len(players)
-        for players in by_region.values():
-            random.shuffle(players)  # sem tempo para todos: amostra justa entre plataformas
-        await asyncio.gather(*(
-            _harvest(riot, region, players, start_time, agg, catalog, report, deadline.passed)
-            for region, players in by_region.items()
-        ))
+        await asyncio.gather(*(region_job(r, ps) for r, ps in by_region.items()))
     except KeyRejectedError as e:
         logger.error("%s", e)
         report.key_rejected = True
