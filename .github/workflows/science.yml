@@ -1,0 +1,68 @@
+# Coleta diária das Ciências (builds incomuns de monochamps de elite).
+# Precisa de:  Settings → Secrets and variables → Actions → Secrets
+#   RIOT_API_KEY      a chave da Riot (a dev key vence em 24 h: troque no dia)
+#   FIREBASE_SA_JSON  o conteúdo do backend/firebase-sa.json
+# Sem RIOT_API_KEY, o workflow não faz nada. Se a chave venceu, a execução
+# fica vermelha (mas publica o que já tinha).
+name: Ciências
+
+on:
+  schedule:
+    - cron: "30 9 * * *" # todo dia, 06:30 em Brasília
+  workflow_dispatch:
+    inputs:
+      minutes:
+        description: Minutos de coleta
+        default: "45"
+
+concurrency:
+  group: science
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      RIOT_API_KEY: ${{ secrets.RIOT_API_KEY }}
+      FIREBASE_SA_JSON: ${{ secrets.FIREBASE_SA_JSON }}
+    steps:
+      - name: Verificar a configuração
+        id: check
+        working-directory: .
+        run: |
+          if [ -z "$RIOT_API_KEY" ] || [ -z "$FIREBASE_SA_JSON" ]; then
+            echo "::notice::Faltam os secrets RIOT_API_KEY ou FIREBASE_SA_JSON: nada a fazer."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Baixar o código
+        if: steps.check.outputs.ready == 'true'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Instalar o uv
+        if: steps.check.outputs.ready == 'true'
+        uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d # v10.4.0
+        with:
+          working-directory: backend
+          enable-cache: true
+
+      - name: Instalar dependências
+        if: steps.check.outputs.ready == 'true'
+        run: uv sync --locked --no-dev
+
+      - name: Coletar e publicar
+        if: steps.check.outputs.ready == 'true'
+        env:
+          FIREBASE_CREDENTIALS_FILE: ${{ runner.temp }}/firebase-sa.json
+        run: |
+          printf '%s' "$FIREBASE_SA_JSON" > "$FIREBASE_CREDENTIALS_FILE"
+          uv run python -m app.science.collect --minutes "${{ inputs.minutes || '45' }}"

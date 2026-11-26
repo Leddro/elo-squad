@@ -32,6 +32,14 @@ service cloud.firestore {
       }
     }
 
+    // Ciências publicadas (aba Ciências): qualquer usuário logado lê.
+    // A base de dados por trás (scienceBuilds, scienceChampions...) fica
+    // na regra de baixo: só a coleta acessa.
+    match /sciences/{doc} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
     // Todo o resto (retratos semanais de elo, códigos de convite...):
     // só o proxy acessa.
     match /{document=**} {
