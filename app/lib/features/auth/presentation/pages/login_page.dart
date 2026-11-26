@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../../../core/presentation/failure_messages.dart';
+import '../../../../core/presentation/theme/app_theme.dart';
 import '../../../../core/presentation/theme/brand_colors.dart';
 import '../../../../core/presentation/widgets/elo_squad_logo.dart';
 import '../../data/auth_providers.dart';
@@ -96,51 +97,12 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     child: Builder(builder: _build),
   );
 
-  /// Tema da entrada: sempre escuro, nas cores hextech da marca.
-  static final _loginTheme = ThemeData(
-    brightness: Brightness.dark,
-    colorScheme:
-        ColorScheme.fromSeed(
-          seedColor: BrandColors.gold,
-          brightness: Brightness.dark,
-        ).copyWith(
-          primary: BrandColors.gold,
-          onPrimary: BrandColors.void0,
-          secondary: BrandColors.red,
-          surface: BrandColors.navy,
-          outline: BrandColors.goldDark,
-        ),
+  /// O tema do app, com fundo transparente para o brilho da entrada aparecer.
+  static final _loginTheme = AppTheme.hextech.copyWith(
     scaffoldBackgroundColor: Colors.transparent,
-    inputDecorationTheme: const InputDecorationTheme(
-      filled: true,
-      fillColor: Color(0x660A1428),
-      border: OutlineInputBorder(),
-      enabledBorder: OutlineInputBorder(
-        borderSide: BorderSide(color: BrandColors.goldDark),
-      ),
-    ),
-    filledButtonTheme: FilledButtonThemeData(
-      style: FilledButton.styleFrom(
-        shape: const BeveledRectangleBorder(
-          borderRadius: BorderRadius.all(Radius.circular(6)),
-        ),
-        padding: const EdgeInsets.symmetric(vertical: 16),
-      ),
-    ),
-    outlinedButtonTheme: OutlinedButtonThemeData(
-      style: OutlinedButton.styleFrom(
-        foregroundColor: BrandColors.goldLight,
-        side: const BorderSide(color: BrandColors.gold),
-        shape: const BeveledRectangleBorder(
-          borderRadius: BorderRadius.all(Radius.circular(6)),
-        ),
-        padding: const EdgeInsets.symmetric(vertical: 14),
-      ),
-    ),
   );
 
   Widget _build(BuildContext context) {
-    final text = Theme.of(context).textTheme;
     return DecoratedBox(
       decoration: const BoxDecoration(
         gradient: RadialGradient(
@@ -163,15 +125,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         const Center(child: EloSquadLogo(width: 220)),
-                        const SizedBox(height: 12),
-                        Text(
-                          'Elo, partidas, ciências e o ranking do seu squad.',
-                          style: text.bodyMedium?.copyWith(
-                            color: BrandColors.goldLight.withValues(alpha: 0.8),
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 28),
+                        const SizedBox(height: 32),
                         if (_creating) ...[
                           TextFormField(
                             controller: _name,

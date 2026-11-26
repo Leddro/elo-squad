@@ -30,6 +30,8 @@ void main() {
 
     await tester.tap(find.byTooltip('Sair'));
     await pumpFrames(tester);
+    await tester.tap(find.widgetWithText(FilledButton, 'Sair'));
+    await pumpFrames(tester);
     expect(find.text('Entrar com Google'), findsOneWidget);
   });
 
@@ -41,10 +43,24 @@ void main() {
 
     await tester.tap(find.byTooltip('Sair'));
     await pumpFrames(tester);
+    await tester.tap(find.widgetWithText(FilledButton, 'Sair'));
+    await pumpFrames(tester);
 
     // Na ordem inversa, o proxy recusaria o pedido (já sem login).
     expect(push.events, ['unregister', 'signOut']);
     expect(find.text('Entrar com Google'), findsOneWidget);
+  });
+
+  testWidgets('sair pede confirmação; cancelar mantém logado', (tester) async {
+    await pumpApp(tester);
+
+    await tester.tap(find.byTooltip('Sair'));
+    await pumpFrames(tester);
+    expect(find.text('Tem certeza que deseja sair?'), findsOneWidget);
+
+    await tester.tap(find.text('Cancelar'));
+    await pumpFrames(tester);
+    expect(find.text('Entrar com Google'), findsNothing);
   });
 
   testWidgets('login cancelado: continua no login, sem erro', (tester) async {

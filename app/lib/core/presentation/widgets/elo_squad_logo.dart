@@ -267,14 +267,15 @@ class _EmblemPainter extends CustomPainter {
         const Offset(100, 142),
         46,
         Paint()
-          ..shader = RadialGradient(
-            colors: [
-              BrandColors.cyan.withValues(alpha: 0.75),
-              BrandColors.cyan.withValues(alpha: 0),
-            ],
-          ).createShader(
-            Rect.fromCircle(center: const Offset(100, 142), radius: 46),
-          ),
+          ..shader =
+              RadialGradient(
+                colors: [
+                  BrandColors.cyan.withValues(alpha: 0.75),
+                  BrandColors.cyan.withValues(alpha: 0),
+                ],
+              ).createShader(
+                Rect.fromCircle(center: const Offset(100, 142), radius: 46),
+              ),
       )
       ..restore();
 

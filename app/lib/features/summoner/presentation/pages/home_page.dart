@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../../../core/presentation/widgets/elo_squad_logo.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../auth/presentation/sign_out.dart';
 import '../../domain/entities/riot_id.dart';
@@ -83,11 +84,7 @@ class _HomePageState extends State<HomePage> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(
-                      Icons.person_search,
-                      size: 72,
-                      color: theme.colorScheme.primary,
-                    ),
+                    const EloSquadEmblem(size: 96),
                     const SizedBox(height: 16),
                     Text(
                       'Busque um invocador pelo Riot ID',
@@ -111,7 +108,26 @@ class _SignOutButton extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) => IconButton(
     tooltip: 'Sair',
     icon: const Icon(Icons.logout),
-    // Depois do logout, o roteador leva ao login sozinho.
-    onPressed: () => ref.read(signOutProvider)(),
+    onPressed: () async {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Sair da conta?'),
+          content: const Text('Tem certeza que deseja sair?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Sair'),
+            ),
+          ],
+        ),
+      );
+      // Depois do logout, o roteador leva ao login sozinho.
+      if (confirmed ?? false) await ref.read(signOutProvider)();
+    },
   );
 }
