@@ -35,6 +35,13 @@ abstract interface class SquadRepository {
   /// Troca o ícone do squad (qualquer membro pode).
   Future<void> setSquadIcon(String squadId, String icon);
 
+  /// Troca o nome e a descrição (só o líder pode). Descrição vazia apaga.
+  Future<void> updateSquadInfo(
+    String squadId, {
+    required String name,
+    required String description,
+  });
+
   /// Tira um membro do squad (só o líder pode).
   Future<void> removeMember(String squadId, String memberUid);
 }

@@ -152,6 +152,7 @@ class Squad(CamelModel):
     members: dict[str, SquadMember]  # uid → membro
     created_at: datetime
     icon: str | None = None  # chave de SQUAD_ICONS; None = inicial do nome
+    description: str | None = None  # só aparece ao abrir o squad
 
 
 class UserRecord(CamelModel):
@@ -188,6 +189,11 @@ SQUAD_ICONS = (
     "castle", "rocket", "paw", "medal", "target", "sparkle",
 )
 SquadIcon = Literal[SQUAD_ICONS]  # type: ignore[valid-type]
+
+
+class SquadInfoRequest(CamelModel):
+    name: str = Field(min_length=1, max_length=30)
+    description: str = Field(default="", max_length=200)
 
 
 class SquadIconRequest(CamelModel):

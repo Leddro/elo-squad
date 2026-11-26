@@ -66,6 +66,14 @@ final class SquadRepositoryImpl implements SquadRepository {
       guardFailures(() => _remote.setSquadIcon(squadId, icon));
 
   @override
+  Future<void> updateSquadInfo(
+    String squadId, {
+    required String name,
+    required String description,
+  }) =>
+      guardFailures(() => _remote.updateSquadInfo(squadId, name, description));
+
+  @override
   Future<void> removeMember(String squadId, String memberUid) =>
       guardFailures(() => _remote.removeMember(squadId, memberUid));
 }

@@ -74,6 +74,14 @@ class FakeSquadRepository implements SquadRepository {
 
   final iconChanges = <(String, String)>[];
   final removedMembers = <(String, String)>[];
+  final infoChanges = <(String, String, String)>[];
+
+  @override
+  Future<void> updateSquadInfo(
+    String squadId, {
+    required String name,
+    required String description,
+  }) async => infoChanges.add((squadId, name, description));
 
   @override
   Future<void> removeMember(String squadId, String memberUid) async =>

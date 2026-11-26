@@ -76,6 +76,10 @@ class InMemoryStore:
     async def set_icon(self, squad_id: str, icon: str) -> None:
         self.squads[squad_id].icon = icon
 
+    async def set_info(self, squad_id: str, name: str, description: str | None) -> None:
+        self.squads[squad_id].name = name
+        self.squads[squad_id].description = description
+
     async def delete_squad(self, squad_id: str, invite_code: str) -> None:
         del self.squads[squad_id]
         del self.codes[invite_code]

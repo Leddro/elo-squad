@@ -20,6 +20,9 @@ abstract class Squad with _$Squad {
 
     /// Chave do ícone escolhido (ver SquadIcon); null = inicial do nome.
     String? icon,
+
+    /// Texto livre do líder; só aparece ao abrir o squad.
+    String? description,
   }) = _Squad;
 
   bool isOwner(String uid) => ownerUid == uid;

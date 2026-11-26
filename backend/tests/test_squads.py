@@ -276,3 +276,33 @@ def test_quem_nao_e_lider_nao_remove_403(client: TestClient) -> None:
     r = client.delete(f"/squads/{ref['id']}/members/a", headers=auth("b"))
     assert r.status_code == 403
     assert r.json()["code"] == "NOT_SQUAD_OWNER"
+
+
+# ---------- Nome e descrição ----------
+
+def test_lider_troca_nome_e_descricao(client: TestClient, store: InMemoryStore) -> None:
+    link(client, "a")
+    ref = create(client, "a")
+    r = client.put(
+        f"/squads/{ref['id']}/info",
+        json={"name": " Novos Brabos ", "description": " Só ranked "},
+        headers=auth("a"),
+    )
+    assert r.status_code == 204
+    squad = store.squads[ref["id"]]
+    assert (squad.name, squad.description) == ("Novos Brabos", "Só ranked")
+
+
+def test_descricao_vazia_vira_none(client: TestClient, store: InMemoryStore) -> None:
+    link(client, "a")
+    ref = create(client, "a")
+    client.put(f"/squads/{ref['id']}/info", json={"name": "X", "description": "  "}, headers=auth("a"))
+    assert store.squads[ref["id"]].description is None
+
+
+def test_so_o_lider_troca_o_nome_403(client: TestClient) -> None:
+    link(client, "a"); link(client, "b")
+    ref = create(client, "a")
+    join(client, "b", ref["inviteCode"])
+    r = client.put(f"/squads/{ref['id']}/info", json={"name": "Hack"}, headers=auth("b"))
+    assert r.status_code == 403

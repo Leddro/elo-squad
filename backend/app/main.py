@@ -43,6 +43,7 @@ from app.models import (
     LinkRiotIdResponse,
     MatchPage,
     SquadIconRequest,
+    SquadInfoRequest,
     SquadRef,
     SummonerProfile,
 )
@@ -228,6 +229,14 @@ async def set_squad_icon(
     squad_id: str, body: SquadIconRequest, user: CurrentUser, services: ServicesDep,
 ) -> Response:
     await services.squads.set_icon(user, squad_id, body.icon)
+    return Response(status_code=204)
+
+
+@app.put("/squads/{squad_id}/info", status_code=204, responses=_SQUAD_ERRORS)
+async def set_squad_info(
+    squad_id: str, body: SquadInfoRequest, user: CurrentUser, services: ServicesDep,
+) -> Response:
+    await services.squads.set_info(user, squad_id, body.name, body.description)
     return Response(status_code=204)
 
 

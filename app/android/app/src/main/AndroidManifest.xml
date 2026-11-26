@@ -3,7 +3,7 @@
          (Play Store) não acessa a rede; o debug funcionaria e esconderia o problema. -->
     <uses-permission android:name="android.permission.INTERNET"/>
     <application
-        android:label="elo_squad"
+        android:label="Elo Squad"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

@@ -7,6 +7,7 @@ import 'package:elo_squad/features/sciences/presentation/providers/science_provi
 import 'package:elo_squad/features/squads/data/squad_data_providers.dart';
 import 'package:elo_squad/features/summoner/data/summoner_data_providers.dart';
 import 'package:elo_squad/features/summoner/domain/repositories/summoner_repository.dart';
+import 'package:elo_squad/features/summoner/presentation/pages/home_page.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart' show Size;
@@ -28,6 +29,7 @@ Future<void> pumpApp(
   FakePushService? push,
   FakeScienceRepository? sciences,
   SummonerRepository? summoner,
+  bool askRiotId = false,
   List<Override> overrides = const [],
 }) async {
   // Tela de celular (360x800 lógicos), não a 800x600 padrão do teste.
@@ -43,6 +45,8 @@ Future<void> pumpApp(
         ),
         matchRepositoryProvider.overrideWithValue(FakeMatchRepository()),
         proxyWarmUpProvider.overrideWithValue(() {}),
+        if (!askRiotId)
+          askRiotIdOnFirstAccessProvider.overrideWithBuild((_, _) => false),
         pushServiceProvider.overrideWithValue(push ?? FakePushService()),
         scienceRepositoryProvider.overrideWithValue(
           sciences ?? FakeScienceRepository(),

@@ -247,4 +247,57 @@ void main() {
     expect(find.text('Remover invocadores'), findsNothing);
     expect(find.text('Sair do squad'), findsOneWidget);
   });
+
+  testWidgets('líder troca nome e descrição; a descrição aparece no squad', (
+    tester,
+  ) async {
+    final squads = FakeSquadRepository(
+      account: linkedAccount,
+      squads: [makeSquad().copyWith(description: 'Só ranked')],
+    );
+    await openSettings(tester, squads);
+    await tester.tap(find.text('Nome e descrição'));
+    await pumpFrames(tester);
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Nome do squad'),
+      'Novos',
+    );
+    await tester.tap(find.text('Salvar'));
+    await pumpFrames(tester);
+
+    expect(squads.infoChanges, [('squad-1', 'Novos', 'Só ranked')]);
+    expect(find.text('Só ranked'), findsOneWidget);
+  });
+
+  testWidgets('descrição não aparece na lista de squads', (tester) async {
+    await openSquadsTab(
+      tester,
+      FakeSquadRepository(
+        account: linkedAccount,
+        squads: [makeSquad().copyWith(description: 'Só ranked')],
+      ),
+    );
+    await tester.tap(find.text('Os Brabos'));
+    await pumpFrames(tester);
+    expect(find.text('Só ranked'), findsNothing);
+  });
+
+  testWidgets('primeiro acesso sem Riot ID abre a tela de vínculo', (
+    tester,
+  ) async {
+    await pumpApp(tester, askRiotId: true);
+    expect(find.text('Vincular Riot ID'), findsWidgets);
+    expect(find.textContaining('Bem-vindo!'), findsOneWidget);
+  });
+
+  testWidgets('"Minha conta" mostra o Riot ID atual', (tester) async {
+    await pumpApp(tester, squads: FakeSquadRepository(account: linkedAccount));
+    await tester.tap(find.byTooltip('Minha conta'));
+    await pumpFrames(tester);
+    expect(
+      find.widgetWithText(ListTile, 'Sua conta atual'),
+      findsOneWidget,
+    );
+    expect(find.widgetWithText(ListTile, 'Fulano#BR1'), findsOneWidget);
+  });
 }

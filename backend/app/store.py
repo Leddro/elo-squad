@@ -47,6 +47,8 @@ class Store(Protocol):
 
     async def set_icon(self, squad_id: str, icon: str) -> None: ...
 
+    async def set_info(self, squad_id: str, name: str, description: str | None) -> None: ...
+
     async def delete_squad(self, squad_id: str, invite_code: str) -> None: ...
 
     # ----- Ranking semanal -----
@@ -167,6 +169,9 @@ class FirestoreStore:
 
     async def set_icon(self, squad_id: str, icon: str) -> None:
         await self._squad(squad_id).update({"icon": icon})
+
+    async def set_info(self, squad_id: str, name: str, description: str | None) -> None:
+        await self._squad(squad_id).update({"name": name, "description": description})
 
     async def delete_squad(self, squad_id: str, invite_code: str) -> None:
         batch = self._db.batch()

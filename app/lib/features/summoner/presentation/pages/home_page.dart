@@ -60,7 +60,14 @@ class _HomePageState extends State<HomePage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Elo Squad'),
-        actions: const [_SignOutButton()],
+        actions: [
+          IconButton(
+            tooltip: 'Minha conta',
+            icon: const Icon(Icons.manage_accounts),
+            onPressed: () => context.pushNamed(Routes.linkRiotId),
+          ),
+          const _SignOutButton(),
+        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(16),
@@ -95,11 +102,31 @@ class _HomePageState extends State<HomePage> {
 
 /// O perfil do dono da conta (o Riot ID vinculado). Sem vínculo, convida a
 /// vincular.
-class _MyProfile extends ConsumerWidget {
+class _MyProfile extends ConsumerStatefulWidget {
   const _MyProfile();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_MyProfile> createState() => _MyProfileState();
+}
+
+class _MyProfileState extends ConsumerState<_MyProfile> {
+  @override
+  void initState() {
+    super.initState();
+    // Primeiro acesso (conta sem Riot ID): pede o perfil uma vez por sessão.
+    ref.listenManual(accountProvider, (_, next) {
+      final account = next.value;
+      if (account == null || account.hasRiotId) return;
+      if (!ref.read(askRiotIdOnFirstAccessProvider)) return;
+      ref.read(askRiotIdOnFirstAccessProvider.notifier).done();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) context.pushNamed(Routes.linkRiotId);
+      });
+    }, fireImmediately: true);
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return switch (ref.watch(accountProvider)) {
       AsyncValue(value: AccountLink(:final riotId?)) => _OwnProfile(
         riotId: riotId,
@@ -109,6 +136,19 @@ class _MyProfile extends ConsumerWidget {
       _ => const Center(child: CircularProgressIndicator()),
     };
   }
+}
+
+/// true até a tela de vínculo ser aberta uma vez nesta sessão. Os testes
+/// desligam (para a home não abrir sozinha outra tela).
+final askRiotIdOnFirstAccessProvider = NotifierProvider<_AskOnce, bool>(
+  _AskOnce.new,
+);
+
+class _AskOnce extends Notifier<bool> {
+  @override
+  bool build() => true;
+
+  void done() => state = false;
 }
 
 class _OwnProfile extends ConsumerWidget {

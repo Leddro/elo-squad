@@ -77,6 +77,12 @@ class SquadDetailPage extends ConsumerWidget {
               subtitle: const Text('O ícone do squad'),
               onTap: () => Navigator.pop(sheetContext, 'theme'),
             ),
+            if (uid != null && squad.isOwner(uid))
+              ListTile(
+                leading: const Icon(Icons.edit_outlined),
+                title: const Text('Nome e descrição'),
+                onTap: () => Navigator.pop(sheetContext, 'info'),
+              ),
             if (uid != null && squad.isOwner(uid) && squad.members.length > 1)
               ListTile(
                 leading: const Icon(Icons.person_remove_outlined),
@@ -100,6 +106,18 @@ class SquadDetailPage extends ConsumerWidget {
         await runAction(
           context,
           () => ref.read(squadRepositoryProvider).setSquadIcon(squad.id, icon),
+        );
+      case 'info':
+        final info = await showDialog<(String, String)>(
+          context: context,
+          builder: (_) => _SquadInfoDialog(squad: squad),
+        );
+        if (info == null || !context.mounted) return;
+        await runAction(
+          context,
+          () => ref
+              .read(squadRepositoryProvider)
+              .updateSquadInfo(squad.id, name: info.$1, description: info.$2),
         );
       case 'remove':
         await _remove(context, ref, squad, uid!);
@@ -209,6 +227,15 @@ class _SquadView extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
+        if (squad.description case final description?) ...[
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text(description, style: text.bodyMedium),
+            ),
+          ),
+          const SizedBox(height: 24),
+        ],
         RankingSection(squadId: squad.id, uid: uid),
         const SizedBox(height: 24),
         _InviteCard(code: squad.inviteCode),
@@ -302,5 +329,77 @@ class _Message extends StatelessWidget {
       padding: const EdgeInsets.all(32),
       child: Text(text, textAlign: TextAlign.center),
     ),
+  );
+}
+
+/// Nome e descrição do squad. Devolve (nome, descrição), ou null se cancelou.
+class _SquadInfoDialog extends StatefulWidget {
+  const _SquadInfoDialog({required this.squad});
+
+  final Squad squad;
+
+  @override
+  State<_SquadInfoDialog> createState() => _SquadInfoDialogState();
+}
+
+class _SquadInfoDialogState extends State<_SquadInfoDialog> {
+  late final _name = TextEditingController(text: widget.squad.name);
+  late final _description = TextEditingController(
+    text: widget.squad.description ?? '',
+  );
+  String? _nameError;
+
+  @override
+  void dispose() {
+    _name.dispose();
+    _description.dispose();
+    super.dispose();
+  }
+
+  void _save() {
+    final name = _name.text.trim();
+    if (name.isEmpty) {
+      setState(() => _nameError = 'Informe o nome.');
+      return;
+    }
+    Navigator.pop(context, (name, _description.text.trim()));
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    title: const Text('Nome e descrição'),
+    content: Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        TextField(
+          controller: _name,
+          maxLength: 30,
+          textCapitalization: TextCapitalization.sentences,
+          decoration: InputDecoration(
+            labelText: 'Nome do squad',
+            errorText: _nameError,
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          controller: _description,
+          maxLength: 200,
+          minLines: 2,
+          maxLines: 4,
+          textCapitalization: TextCapitalization.sentences,
+          decoration: const InputDecoration(
+            labelText: 'Descrição',
+            hintText: 'Aparece para quem abrir o squad.',
+          ),
+        ),
+      ],
+    ),
+    actions: [
+      TextButton(
+        onPressed: () => Navigator.pop(context),
+        child: const Text('Cancelar'),
+      ),
+      FilledButton(onPressed: _save, child: const Text('Salvar')),
+    ],
   );
 }

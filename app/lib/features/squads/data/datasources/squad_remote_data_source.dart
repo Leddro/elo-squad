@@ -39,6 +39,15 @@ final class SquadRemoteDataSource {
     data: {'icon': icon},
   );
 
+  Future<void> updateSquadInfo(
+    String squadId,
+    String name,
+    String description,
+  ) => _dio.put<void>(
+    '/squads/${Uri.encodeComponent(squadId)}/info',
+    data: {'name': name, 'description': description},
+  );
+
   Future<void> removeMember(String squadId, String memberUid) =>
       _dio.delete<void>(
         '/squads/${Uri.encodeComponent(squadId)}/members/'

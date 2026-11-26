@@ -106,6 +106,15 @@ class SquadService:
             raise SquadNotFoundError()
         await self._store.set_icon(squad_id, icon)
 
+    async def set_info(self, user: AuthUser, squad_id: str, name: str, description: str) -> None:
+        """Só o líder troca o nome e a descrição."""
+        squad = await self._store.get_squad(squad_id)
+        if squad is None or user.uid not in squad.member_uids:
+            raise SquadNotFoundError()
+        if squad.owner_uid != user.uid:
+            raise NotSquadOwnerError()
+        await self._store.set_info(squad_id, name.strip(), description.strip() or None)
+
     async def remove_member(self, user: AuthUser, squad_id: str, member_uid: str) -> None:
         """O líder tira alguém do squad (para sair, cada um usa o leave)."""
         squad = await self._store.get_squad(squad_id)

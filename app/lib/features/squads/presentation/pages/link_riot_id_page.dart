@@ -5,6 +5,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../../../core/presentation/run_action.dart';
 import '../../../summoner/domain/entities/riot_id.dart';
 import '../../data/squad_data_providers.dart';
+import '../providers/squad_providers.dart';
 
 /// Vincula o Riot ID do usuário à conta (o proxy confere se existe na Riot).
 class LinkRiotIdPage extends ConsumerStatefulWidget {
@@ -48,16 +49,31 @@ class _LinkRiotIdPageState extends ConsumerState<LinkRiotIdPage> {
 
   @override
   Widget build(BuildContext context) {
+    final current = ref.watch(accountProvider).value?.riotId;
     return Scaffold(
-      appBar: AppBar(title: const Text('Vincular Riot ID')),
+      appBar: AppBar(
+        title: Text(current == null ? 'Vincular Riot ID' : 'Minha conta'),
+      ),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text(
-              'Digite o seu Riot ID, do jeito que aparece no cliente do jogo.',
-            ),
+            if (current != null) ...[
+              Card(
+                child: ListTile(
+                  leading: const Icon(Icons.verified_user_outlined),
+                  title: Text(current.toString()),
+                  subtitle: const Text('Sua conta atual'),
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text('Para trocar, digite outro Riot ID.'),
+            ] else
+              const Text(
+                'Bem-vindo! Digite o seu Riot ID, do jeito que aparece no '
+                'cliente do jogo. Ele é o seu perfil no app e nos squads.',
+              ),
             const SizedBox(height: 16),
             TextField(
               controller: _controller,
