@@ -6,6 +6,7 @@ e um 429 (excedeu mesmo assim) espera o Retry-After e tenta de novo.
 """
 
 import asyncio
+import logging
 import time
 from collections import deque
 from collections.abc import Awaitable, Callable
@@ -15,6 +16,8 @@ from urllib.parse import quote
 import httpx
 
 from app.errors import NotFoundError, UpstreamError
+
+logger = logging.getLogger(__name__)
 
 # Plataforma (ranque, maestria) → região (partidas).
 PLATFORMS: dict[str, str] = {
@@ -76,6 +79,7 @@ class ScienceRiot:
         self._limiter_factory = limiter_factory or (lambda: RateLimiter(sleep=sleep))
         self._limiters: dict[str, RateLimiter] = {}
         self.calls = 0
+        self.throttled = 0
 
     async def apex_puuids(self, platform: str) -> list[str]:
         """Desafiante + Grão-Mestre da Solo/Duo, do maior PDL para o menor."""
@@ -116,7 +120,10 @@ class ScienceRiot:
                 raise UpstreamError(f"Falha de rede ao chamar a Riot: {e!r}") from e
             status = response.status_code
             if status == 429:
-                await self._sleep(float(response.headers.get("Retry-After", "5")))
+                retry = float(response.headers.get("Retry-After", "5"))
+                self.throttled += 1
+                logger.warning("429 em %s (%s): esperando %.0f s", route, response.headers.get("X-Rate-Limit-Type"), retry)
+                await self._sleep(retry)
                 continue
             if status in (401, 403):
                 raise KeyRejectedError(f"Riot respondeu {status}: chave inválida ou expirada")
