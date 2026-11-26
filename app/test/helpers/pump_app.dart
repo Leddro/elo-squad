@@ -7,6 +7,7 @@ import 'package:elo_squad/features/sciences/presentation/providers/science_provi
 import 'package:elo_squad/features/squads/data/squad_data_providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart' show Size;
 import 'package:flutter_riverpod/misc.dart' show Override;
 
 import 'fake_auth_repository.dart';
@@ -25,6 +26,11 @@ Future<void> pumpApp(
   FakeScienceRepository? sciences,
   List<Override> overrides = const [],
 }) async {
+  // Tela de celular (360x800 lógicos), não a 800x600 padrão do teste.
+  tester.view
+    ..physicalSize = const Size(1080, 2400)
+    ..devicePixelRatio = 3;
+  addTearDown(tester.view.reset);
   await tester.pumpWidget(
     ProviderScope(
       overrides: [

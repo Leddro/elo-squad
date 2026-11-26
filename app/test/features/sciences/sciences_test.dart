@@ -62,11 +62,13 @@ void main() {
   testWidgets('filtro por rota', (tester) async {
     await openSciences(tester, FakeScienceRepository(board: board()));
 
+    await tester.ensureVisible(find.text('Bot'));
     await tester.tap(find.text('Bot'));
     await pumpFrames(tester);
     expect(find.text('Jinx Letalidade'), findsOneWidget);
     expect(find.text('Malphite AP no Mid'), findsNothing);
 
+    await tester.ensureVisible(find.text('Top'));
     await tester.tap(find.text('Top'));
     await pumpFrames(tester);
     expect(find.text('Nenhuma ciência nesta rota'), findsOneWidget);
