@@ -338,25 +338,16 @@ class _SquadMembers extends ConsumerWidget {
           index: rows.length,
           child: Padding(
             padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
-            // OverflowBar: lado a lado; se não couber, um embaixo do outro.
-            child: OverflowBar(
-              alignment: MainAxisAlignment.spaceBetween,
-              overflowAlignment: OverflowBarAlignment.end,
-              children: [
-                TextButton.icon(
-                  onPressed: () => _changeIcon(context, ref),
-                  icon: const Icon(Icons.palette_outlined, size: 18),
-                  label: const Text('Ícone'),
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                onPressed: () => context.pushNamed(
+                  Routes.squad,
+                  pathParameters: {'squadId': squad.id},
                 ),
-                TextButton.icon(
-                  onPressed: () => context.pushNamed(
-                    Routes.squad,
-                    pathParameters: {'squadId': squad.id},
-                  ),
-                  icon: const Icon(Icons.open_in_new, size: 18),
-                  label: const Text('Abrir squad'),
-                ),
-              ],
+                icon: const Icon(Icons.open_in_new, size: 18),
+                label: const Text('Abrir squad'),
+              ),
             ),
           ),
         ),
@@ -381,15 +372,6 @@ class _SquadMembers extends ConsumerWidget {
       for (final m in squad.members)
         if (!seen.contains(m.uid)) _Row(m),
     ];
-  }
-
-  Future<void> _changeIcon(BuildContext context, WidgetRef ref) async {
-    final icon = await pickSquadIcon(context, current: squad.icon);
-    if (icon == null || !context.mounted) return;
-    await runAction(
-      context,
-      () => ref.read(squadRepositoryProvider).setSquadIcon(squad.id, icon),
-    );
   }
 }
 

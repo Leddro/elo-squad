@@ -38,4 +38,10 @@ final class SquadRemoteDataSource {
     '/squads/${Uri.encodeComponent(squadId)}/icon',
     data: {'icon': icon},
   );
+
+  Future<void> removeMember(String squadId, String memberUid) =>
+      _dio.delete<void>(
+        '/squads/${Uri.encodeComponent(squadId)}/members/'
+        '${Uri.encodeComponent(memberUid)}',
+      );
 }

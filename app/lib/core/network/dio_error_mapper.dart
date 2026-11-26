@@ -46,6 +46,7 @@ Failure _fromResponse(Response<dynamic>? response) {
     'SQUAD_NOT_FOUND' => const SquadFailure(SquadProblem.notFound),
     'SQUAD_FULL' => const SquadFailure(SquadProblem.full),
     'SQUAD_LIMIT' => const SquadFailure(SquadProblem.limit),
+    'NOT_SQUAD_OWNER' => const SquadFailure(SquadProblem.notOwner),
     _ => UnexpectedFailure('HTTP ${response?.statusCode}: $body'),
   };
 }

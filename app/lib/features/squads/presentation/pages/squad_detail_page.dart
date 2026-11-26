@@ -5,12 +5,14 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../../../core/presentation/failure_messages.dart';
 import '../../../../core/presentation/run_action.dart';
+import '../../../../core/presentation/theme/brand_colors.dart';
 import '../../../../core/presentation/widgets/network_avatar.dart';
 import '../../../../core/router/app_router.dart';
 import '../../data/squad_data_providers.dart';
 import '../../domain/entities/squad.dart';
 import '../providers/squad_providers.dart';
 import '../widgets/ranking_section.dart';
+import '../widgets/squad_icon.dart';
 
 /// Um squad: o código de convite e os membros.
 class SquadDetailPage extends ConsumerWidget {
@@ -27,14 +29,21 @@ class SquadDetailPage extends ConsumerWidget {
       appBar: AppBar(
         title: Text(squad.value?.name ?? 'Squad'),
         actions: [
-          if (squad.value != null)
-            PopupMenuButton<void>(
-              itemBuilder: (_) => [
-                PopupMenuItem(
-                  onTap: () => _leave(context, ref, squad.value!),
-                  child: const Text('Sair do squad'),
+          if (squad.value case final value?)
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: IconButton(
+                tooltip: 'Configurações',
+                icon: const Icon(Icons.settings),
+                style: IconButton.styleFrom(
+                  foregroundColor: BrandColors.gold,
+                  shape: const BeveledRectangleBorder(
+                    borderRadius: BorderRadius.all(Radius.circular(8)),
+                    side: BorderSide(color: BrandColors.goldDark),
+                  ),
                 ),
-              ],
+                onPressed: () => _settings(context, ref, value, uid),
+              ),
             ),
         ],
       ),
@@ -47,6 +56,112 @@ class SquadDetailPage extends ConsumerWidget {
         AsyncValue(:final error?) => _Message(shortFailureMessage(error)),
         _ => const Center(child: CircularProgressIndicator()),
       },
+    );
+  }
+
+  Future<void> _settings(
+    BuildContext context,
+    WidgetRef ref,
+    Squad squad,
+    String? uid,
+  ) async {
+    final choice = await showModalBottomSheet<String>(
+      context: context,
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.palette_outlined),
+              title: const Text('Tema'),
+              subtitle: const Text('O ícone do squad'),
+              onTap: () => Navigator.pop(sheetContext, 'theme'),
+            ),
+            if (uid != null && squad.isOwner(uid) && squad.members.length > 1)
+              ListTile(
+                leading: const Icon(Icons.person_remove_outlined),
+                title: const Text('Remover invocadores'),
+                onTap: () => Navigator.pop(sheetContext, 'remove'),
+              ),
+            ListTile(
+              leading: const Icon(Icons.logout, color: BrandColors.red),
+              title: const Text('Sair do squad'),
+              onTap: () => Navigator.pop(sheetContext, 'leave'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (!context.mounted) return;
+    switch (choice) {
+      case 'theme':
+        final icon = await pickSquadIcon(context, current: squad.icon);
+        if (icon == null || !context.mounted) return;
+        await runAction(
+          context,
+          () => ref.read(squadRepositoryProvider).setSquadIcon(squad.id, icon),
+        );
+      case 'remove':
+        await _remove(context, ref, squad, uid!);
+      case 'leave':
+        await _leave(context, ref, squad);
+    }
+  }
+
+  Future<void> _remove(
+    BuildContext context,
+    WidgetRef ref,
+    Squad squad,
+    String uid,
+  ) async {
+    final member = await showModalBottomSheet<SquadMember>(
+      context: context,
+      builder: (sheetContext) => SafeArea(
+        child: ListView(
+          shrinkWrap: true,
+          children: [
+            const Padding(
+              padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+              child: Text('Quem sai do squad?'),
+            ),
+            for (final m in squad.members)
+              if (m.uid != uid)
+                ListTile(
+                  leading: NetworkAvatar(url: m.profileIconUrl, size: 36),
+                  title: Text(m.riotId.toString()),
+                  trailing: const Icon(
+                    Icons.person_remove_outlined,
+                    color: BrandColors.red,
+                  ),
+                  onTap: () => Navigator.pop(sheetContext, m),
+                ),
+          ],
+        ),
+      ),
+    );
+    if (member == null || !context.mounted) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text('Remover ${member.riotId}?'),
+        content: const Text('Para voltar, vai precisar do código de convite.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Remover'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+    await runAction(
+      context,
+      () =>
+          ref.read(squadRepositoryProvider).removeMember(squad.id, member.uid),
     );
   }
 

@@ -18,6 +18,7 @@ String shortFailureMessage(Object error) {
       SquadProblem.notFound => 'Código de convite inválido.',
       SquadProblem.full => 'Este squad já está cheio.',
       SquadProblem.limit => 'Você já está no número máximo de squads.',
+      SquadProblem.notOwner => 'Só o líder do squad pode fazer isso.',
     },
     AuthFailure(:final problem) => switch (problem) {
       AuthProblem.invalidCredentials => 'E-mail ou senha incorretos.',

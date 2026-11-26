@@ -39,6 +39,10 @@ class SquadNotFoundError(AppError):
     """Código de convite inválido, ou squad do qual o usuário não faz parte."""
 
 
+class NotSquadOwnerError(AppError):
+    """Só o líder do squad pode fazer isso."""
+
+
 class SquadFullError(AppError):
     """O squad já tem o máximo de membros."""
 

@@ -62,6 +62,9 @@ enum SquadProblem {
   /// O squad já tem o máximo de membros.
   full,
 
+  /// Só o líder pode fazer isso.
+  notOwner,
+
   /// O usuário já está no máximo de squads.
   limit,
 }

@@ -22,6 +22,7 @@ from app.config import Settings, get_settings
 from app.ddragon import DataDragon
 from app.errors import (
     NotFoundError,
+    NotSquadOwnerError,
     RateLimitedError,
     RiotIdRequiredError,
     SquadFullError,
@@ -230,6 +231,14 @@ async def set_squad_icon(
     return Response(status_code=204)
 
 
+@app.delete("/squads/{squad_id}/members/{member_uid}", status_code=204, responses=_SQUAD_ERRORS)
+async def remove_squad_member(
+    squad_id: str, member_uid: str, user: CurrentUser, services: ServicesDep,
+) -> Response:
+    await services.squads.remove_member(user, squad_id, member_uid)
+    return Response(status_code=204)
+
+
 # ---------- Tarefas agendadas (Cloud Scheduler) ----------
 
 def get_jobs_secret(request: Request) -> str | None:
@@ -293,6 +302,11 @@ async def _on_unauthenticated(_: Request, exc: UnauthenticatedError) -> JSONResp
 @app.exception_handler(RiotIdRequiredError)
 async def _on_riot_id_required(_: Request, exc: RiotIdRequiredError) -> JSONResponse:
     return _error(409, "RIOT_ID_REQUIRED", "Vincule o seu Riot ID antes de entrar em squads.")
+
+
+@app.exception_handler(NotSquadOwnerError)
+async def _on_not_owner(_: Request, exc: NotSquadOwnerError) -> JSONResponse:
+    return _error(403, "NOT_SQUAD_OWNER", "Só o líder do squad pode fazer isso.")
 
 
 @app.exception_handler(SquadNotFoundError)

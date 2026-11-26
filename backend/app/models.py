@@ -24,7 +24,7 @@ UnavailableSection = Literal["ranked", "masteries"]
 ErrorCode = Literal[
     "SUMMONER_NOT_FOUND", "RATE_LIMITED", "UPSTREAM_UNAVAILABLE",
     # Fase 3: login e squads.
-    "UNAUTHENTICATED", "RIOT_ID_REQUIRED", "SQUAD_NOT_FOUND", "SQUAD_FULL", "SQUAD_LIMIT",
+    "UNAUTHENTICATED", "RIOT_ID_REQUIRED", "SQUAD_NOT_FOUND", "SQUAD_FULL", "SQUAD_LIMIT", "NOT_SQUAD_OWNER",
 ]
 
 

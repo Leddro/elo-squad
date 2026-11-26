@@ -142,7 +142,7 @@ void main() {
     await tester.tap(find.text('Abrir squad'));
     await pumpFrames(tester);
 
-    await tester.tap(find.byType(PopupMenuButton<void>));
+    await tester.tap(find.byTooltip('Configurações'));
     await pumpFrames(tester);
     await tester.tap(find.text('Sair do squad'));
     await pumpFrames(tester);
@@ -195,20 +195,56 @@ void main() {
     expect(find.text('-10 PDL'), findsOneWidget);
   });
 
-  testWidgets('escolher o ícone do squad', (tester) async {
+  Future<void> openSettings(
+    WidgetTester tester,
+    FakeSquadRepository squads,
+  ) async {
+    await openSquadsTab(tester, squads);
+    await tester.tap(find.text('Os Brabos'));
+    await pumpFrames(tester);
+    await tester.tap(find.text('Abrir squad'));
+    await pumpFrames(tester);
+    await tester.tap(find.byTooltip('Configurações'));
+    await pumpFrames(tester);
+  }
+
+  testWidgets('escolher o tema (ícone) do squad', (tester) async {
     final squads = FakeSquadRepository(
       account: linkedAccount,
       squads: [makeSquad()],
     );
-    await openSquadsTab(tester, squads);
-    await tester.tap(find.text('Os Brabos'));
-    await pumpFrames(tester);
-
-    await tester.tap(find.text('Ícone'));
+    await openSettings(tester, squads);
+    await tester.tap(find.text('Tema'));
     await pumpFrames(tester);
     await tester.tap(find.byKey(const ValueKey('icon-castle')));
     await pumpFrames(tester);
 
     expect(squads.iconChanges, [('squad-1', 'castle')]);
+  });
+
+  testWidgets('líder remove um invocador', (tester) async {
+    final squads = FakeSquadRepository(
+      account: linkedAccount,
+      squads: [makeSquad()],
+    );
+    await openSettings(tester, squads);
+    await tester.tap(find.text('Remover invocadores'));
+    await pumpFrames(tester);
+    await tester.tap(find.text('Ciclano#BR1').last);
+    await pumpFrames(tester);
+    await tester.tap(find.widgetWithText(FilledButton, 'Remover'));
+    await pumpFrames(tester);
+
+    expect(squads.removedMembers, [('squad-1', 'uid-2')]);
+  });
+
+  testWidgets('quem não é líder não vê "Remover invocadores"', (tester) async {
+    final squads = FakeSquadRepository(
+      account: linkedAccount,
+      squads: [makeSquad().copyWith(ownerUid: 'uid-2')],
+    );
+    await openSettings(tester, squads);
+    expect(find.text('Remover invocadores'), findsNothing);
+    expect(find.text('Sair do squad'), findsOneWidget);
   });
 }

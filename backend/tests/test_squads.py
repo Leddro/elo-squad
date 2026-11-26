@@ -256,3 +256,23 @@ def test_icone_de_squad_alheio_404(client: TestClient) -> None:
     ref = create(client, "a")
     r = client.put(f"/squads/{ref['id']}/icon", json={"icon": "star"}, headers=auth("b"))
     assert r.status_code == 404
+
+
+# ---------- Remover membro ----------
+
+def test_lider_remove_um_membro(client: TestClient, store: InMemoryStore) -> None:
+    link(client, "a"); link(client, "b")
+    ref = create(client, "a")
+    join(client, "b", ref["inviteCode"])
+    r = client.delete(f"/squads/{ref['id']}/members/b", headers=auth("a"))
+    assert r.status_code == 204
+    assert store.squads[ref["id"]].member_uids == ["a"]
+
+
+def test_quem_nao_e_lider_nao_remove_403(client: TestClient) -> None:
+    link(client, "a"); link(client, "b")
+    ref = create(client, "a")
+    join(client, "b", ref["inviteCode"])
+    r = client.delete(f"/squads/{ref['id']}/members/a", headers=auth("b"))
+    assert r.status_code == 403
+    assert r.json()["code"] == "NOT_SQUAD_OWNER"

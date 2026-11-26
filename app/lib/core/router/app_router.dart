@@ -146,7 +146,11 @@ class _ScaffoldWithNavBar extends StatelessWidget {
       onDestinationSelected: (index) =>
           shell.goBranch(index, initialLocation: index == shell.currentIndex),
       destinations: const [
-        NavigationDestination(icon: Icon(Icons.search), label: 'Buscar'),
+        NavigationDestination(
+          icon: Icon(Icons.home_outlined),
+          selectedIcon: Icon(Icons.home),
+          label: 'Início',
+        ),
         NavigationDestination(
           icon: Icon(Icons.science_outlined),
           selectedIcon: Icon(Icons.science),

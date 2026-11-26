@@ -5,7 +5,7 @@ from collections.abc import Callable
 from datetime import UTC, datetime
 
 from app.auth import AuthUser
-from app.errors import RiotIdRequiredError, SquadFullError, SquadLimitError, SquadNotFoundError
+from app.errors import NotSquadOwnerError, RiotIdRequiredError, SquadFullError, SquadLimitError, SquadNotFoundError
 from app.models import LinkRiotIdResponse, Squad, SquadMember, SquadRef, UserRecord
 from app.service import SummonerService
 from app.store import Store
@@ -105,6 +105,17 @@ class SquadService:
         if squad is None or user.uid not in squad.member_uids:
             raise SquadNotFoundError()
         await self._store.set_icon(squad_id, icon)
+
+    async def remove_member(self, user: AuthUser, squad_id: str, member_uid: str) -> None:
+        """O líder tira alguém do squad (para sair, cada um usa o leave)."""
+        squad = await self._store.get_squad(squad_id)
+        if squad is None or user.uid not in squad.member_uids:
+            raise SquadNotFoundError()
+        if squad.owner_uid != user.uid:
+            raise NotSquadOwnerError()
+        if member_uid == user.uid or member_uid not in squad.member_uids:
+            raise SquadNotFoundError()
+        await self._store.remove_member(squad_id, member_uid)
 
     async def _member(self, user: AuthUser) -> tuple[SquadMember, UserRecord]:
         record = await self._store.get_user(user.uid)
