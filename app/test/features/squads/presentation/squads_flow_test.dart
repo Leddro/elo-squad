@@ -294,10 +294,7 @@ void main() {
     await pumpApp(tester, squads: FakeSquadRepository(account: linkedAccount));
     await tester.tap(find.byTooltip('Minha conta'));
     await pumpFrames(tester);
-    expect(
-      find.widgetWithText(ListTile, 'Sua conta atual'),
-      findsOneWidget,
-    );
+    expect(find.widgetWithText(ListTile, 'Sua conta atual'), findsOneWidget);
     expect(find.widgetWithText(ListTile, 'Fulano#BR1'), findsOneWidget);
   });
 }
