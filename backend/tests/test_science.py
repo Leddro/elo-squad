@@ -165,6 +165,20 @@ def test_poucas_partidas_ou_perdendo_nao_entra() -> None:
     assert pick_sciences([ap_mid(20, 8)], [baseline()], PatchChanges(), CATALOG, names) == []
 
 
+def test_previa_completa_a_lista_depois_das_ciencias() -> None:
+    names = {MALPHITE: "Malphite"}
+    comum = BuildStats("16.23", MALPHITE, "TOP", (3068, 3075), 40, 30)
+    poucas = ap_mid(5, 5, core=(6653, 3157))
+    builds = [ap_mid(12, 9), comum, poucas, ap_mid(20, 8, core=(3089, 6653))]
+
+    sciences = pick_sciences(builds, [baseline()], PatchChanges(), CATALOG, names, fill_to=3)
+
+    assert sciences[0].items[:2] == [3089, 3157]  # a Ciência de verdade vem primeiro
+    assert len(sciences) == 3                     # a comum e a de poucas partidas completam
+    assert all(s.games != 20 for s in sciences)   # perdendo continua de fora
+    assert len(pick_sciences(builds, [baseline()], PatchChanges(), CATALOG, names, fill_to=1)) == 1
+
+
 def test_buff_no_patch_sobe_a_ciencia() -> None:
     builds = [ap_mid(12, 9), ap_mid(12, 9, core=(6653, 3157))]
     names = {MALPHITE: "Malphite"}

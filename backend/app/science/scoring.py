@@ -22,6 +22,11 @@ PATCH_WEIGHT = 0.01          # por ponto de buff/nerf
 MAX_PATCH_BONUS = 0.05
 MAX_PER_CHAMPION = 3
 MAX_SCIENCES = 60
+# Enquanto há poucos dados, completa a lista até PREVIEW_FILL com as melhores
+# builds que ganham, mesmo sem serem incomuns ou com poucas partidas. As
+# Ciências de verdade vêm sempre antes e, com o tempo, tomam o lugar delas.
+PREVIEW_FILL = 20
+PREVIEW_MIN_GAMES = 3
 
 ROLE_NAMES = {"TOP": "Top", "JUNGLE": "Selva", "MIDDLE": "Mid", "BOTTOM": "Bot", "UTILITY": "Suporte"}
 _ROLE_PHRASE = {"TOP": "no Top", "JUNGLE": "na Selva", "MIDDLE": "no Mid", "BOTTOM": "no Bot", "UTILITY": "de Suporte"}
@@ -95,18 +100,22 @@ def pick_sciences(
     changes: PatchChanges,
     catalog: ItemCatalog,
     champion_names: dict[int, str],
+    fill_to: int = 0,
 ) -> list[Science]:
+    """fill_to > 0 completa a lista com builds "prévia" (ver PREVIEW_FILL)."""
     by_champion = _merge_by_champion(champions)
     candidates: list[tuple[Science, bool]] = []
+    previews: list[tuple[Science, bool]] = []
     for build in _merge_by_build(builds):
         champ = by_champion.get(build.champion_id)
-        if build.games < MIN_GAMES or champ is None or champ.games < MIN_CHAMPION_GAMES:
+        if build.games < PREVIEW_MIN_GAMES or champ is None or champ.games < MIN_CHAMPION_GAMES:
             continue
         if build.wins / build.games < MIN_WINRATE:
             continue
         off_role = champ.roles[build.role] / champ.games < OFF_ROLE_SHARE
         off_build = min(champ.items[i] for i in build.core) / champ.games < OFF_BUILD_SHARE
-        if not (off_role or off_build):
+        strict = build.games >= MIN_GAMES and (off_role or off_build)
+        if not strict and not fill_to:
             continue
 
         items = list(build.core)
@@ -128,13 +137,19 @@ def pick_sciences(
             wins=build.wins,
             score=wilson_lower_bound(build.wins, build.games) + _patch_bonus(build, items, changes),
         )
-        candidates.append((science, off_role))
+        (candidates if strict else previews).append((science, off_role))
 
     candidates.sort(key=lambda c: c[0].score, reverse=True)
+    previews.sort(key=lambda c: c[0].score, reverse=True)
+    strict_count = len(candidates)
+    if strict_count < fill_to:
+        candidates += previews
     picked: list[Science] = []
     per_champion: Counter[int] = Counter()
     titles: set[str] = set()
-    for science, _ in candidates:
+    for index, (science, _) in enumerate(candidates):
+        if index >= strict_count and len(picked) >= fill_to:
+            break
         if per_champion[science.champion_id] >= MAX_PER_CHAMPION:
             continue
         if science.title in titles:  # mesmo título no mesmo campeão: diferencia pelo 1º item

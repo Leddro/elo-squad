@@ -32,7 +32,7 @@ from app.science.extract import champion_games, extract_build
 from app.science.items import ItemCatalog
 from app.science.patch_diff import PatchChanges, diff_champions, diff_items
 from app.science.riot import PLATFORMS, KeyRejectedError, ScienceRiot
-from app.science.scoring import ROLE_NAMES, pick_sciences
+from app.science.scoring import PREVIEW_FILL, ROLE_NAMES, pick_sciences
 from app.science.store import Monochamp, ScienceStore
 
 logger = logging.getLogger("science")
@@ -189,7 +189,7 @@ async def publish(store: ScienceStore, static: StaticData, now: datetime) -> int
     patches = [_patch(current), _patch(previous)]
     sciences = pick_sciences(
         await store.list_builds(patches), await store.list_champions(patches), changes, catalog,
-        {cid: c["name"] for cid, c in by_id.items()},
+        {cid: c["name"] for cid, c in by_id.items()}, fill_to=PREVIEW_FILL,
     )
 
     def item(item_id: int) -> dict[str, Any]:
@@ -270,7 +270,7 @@ async def run(
     return report
 
 
-async def _main(minutes: float, only: list[str] | None) -> int:
+async def _main(minutes: float, only: list[str] | None, publish_only: bool = False) -> int:
     from app.config import get_settings
     from app.main import _firebase
     from app.science.store import FirestoreScienceStore
@@ -282,6 +282,11 @@ async def _main(minutes: float, only: list[str] | None) -> int:
     from firebase_admin import firestore_async
 
     store = FirestoreScienceStore(firestore_async.client(fb_app))
+    if publish_only:
+        async with httpx.AsyncClient(timeout=20) as http:
+            count = await publish(store, StaticData(http), datetime.now(UTC))
+        logger.info("Publicado sem coletar: %d ciências", count)
+        return 0
     async with httpx.AsyncClient(timeout=20) as http:
         riot = ScienceRiot(http, settings.riot_api_key.get_secret_value())
         platforms = {p: PLATFORMS[p] for p in only} if only else PLATFORMS
@@ -301,5 +306,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Coleta das Ciências")
     parser.add_argument("--minutes", type=float, default=45)
     parser.add_argument("--platforms", nargs="*", choices=sorted(PLATFORMS), help="padrão: todas")
+    parser.add_argument("--publish-only", action="store_true", help="só refaz sciences/current, sem chamar a Riot")
     args = parser.parse_args()
-    raise SystemExit(asyncio.run(_main(args.minutes, args.platforms)))
+    raise SystemExit(asyncio.run(_main(args.minutes, args.platforms, args.publish_only)))
