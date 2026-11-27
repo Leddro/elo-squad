@@ -16,6 +16,8 @@ class InMemoryScienceStore:
         self.champions: dict[str, ChampionStats] = {}
         self.patches: dict[str, PatchChanges] = {}
         self.published: dict[str, Any] | None = None
+        self.progress: dict[str, dict[str, int]] = {}
+        self.seen: dict[str, dict[str, int]] = {}
 
     async def get_monochamps(self, platform: str) -> tuple[datetime | None, list[Monochamp]]:
         return self.monochamps.get(platform, (None, []))
@@ -26,7 +28,18 @@ class InMemoryScienceStore:
     async def get_cursor(self) -> datetime | None:
         return self.cursor
 
-    async def save_aggregates(self, agg: Aggregator, cursor: datetime) -> None:
+    async def get_progress(self, platform: str) -> dict[str, int]:
+        return dict(self.progress.get(platform, {}))
+
+    async def get_seen(self, region: str) -> dict[str, int]:
+        return dict(self.seen.get(region, {}))
+
+    async def save_aggregates(
+        self, agg: Aggregator, cursor: datetime,
+        progress: dict[str, dict[str, int]], seen: dict[str, dict[str, int]],
+    ) -> None:
+        self.progress.update({p: dict(s) for p, s in progress.items()})
+        self.seen.update({r: dict(m) for r, m in seen.items()})
         for key, b in agg.builds.items():
             target = self.builds.setdefault(key, BuildStats(b.patch, b.champion_id, b.role, b.core))
             target.merge(b)

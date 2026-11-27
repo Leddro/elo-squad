@@ -1,4 +1,4 @@
-# Coleta diária das Ciências (builds incomuns de monochamps de elite).
+# Coleta das Ciências (builds incomuns de monochamps de elite).
 # Precisa de:  Settings → Secrets and variables → Actions → Secrets
 #   RIOT_API_KEY      a chave da Riot (a dev key vence em 24 h: troque no dia)
 #   FIREBASE_SA_JSON  o conteúdo do backend/firebase-sa.json
@@ -8,7 +8,9 @@ name: Ciências
 
 on:
   schedule:
-    - cron: "30 9 * * *" # todo dia, 06:30 em Brasília
+    # A cada 3 horas (00:30, 03:30, 06:30... em Brasília). Cada coleta continua
+    # de onde a anterior parou; o concurrency abaixo impede duas ao mesmo tempo.
+    - cron: "30 */3 * * *"
   workflow_dispatch:
     inputs:
       minutes:

@@ -8,7 +8,7 @@ from typing import Any
 import httpx
 
 from app.science.aggregate import Aggregator, BuildStats, ChampionStats
-from app.science.collect import StaticData, is_monochamp, run
+from app.science.collect import StaticData, harvest_order, is_monochamp, run
 from app.science.extract import champion_games, extract_build
 from app.science.items import ItemCatalog
 from app.science.patch_diff import PatchChanges, diff_champions, diff_items
@@ -50,10 +50,12 @@ def player(puuid: str, champion: int, role: str, win: bool, final: list[int], pi
             **{f"item{i}": finals[i] for i in range(7)}}
 
 
-def make_match(match_id: str, players: list[dict[str, Any]], duration: int = 1800) -> dict[str, Any]:
+def make_match(
+    match_id: str, players: list[dict[str, Any]], duration: int = 1800, start_ms: int = 0,
+) -> dict[str, Any]:
     return {"metadata": {"matchId": match_id},
             "info": {"queueId": 420, "gameDuration": duration, "gameVersion": "16.23.840.1",
-                     "participants": players}}
+                     "gameStartTimestamp": start_ms, "participants": players}}
 
 
 def make_timeline(puuid: str, purchases: list[int], skills: str, undo: int | None = None) -> dict[str, Any]:
@@ -247,6 +249,11 @@ class FakeStatic(StaticData):
         return {"Malphite": {"key": "54", "id": "Malphite", "name": "Malphite", "stats": {"hp": hp}, "spells": []}}
 
 
+def match_start(i: int) -> int:
+    """BR1_0 começou 5 h antes de NOW, BR1_4 há 1 h (epoch s)."""
+    return int(NOW.timestamp()) - (5 - i) * 3600
+
+
 def riot_transport(key_ok: bool = True) -> httpx.MockTransport:
     recent = int(NOW.timestamp() * 1000)
 
@@ -270,7 +277,9 @@ def riot_transport(key_ok: bool = True) -> httpx.MockTransport:
                                              {"championId": MALPHITE, "championPoints": 290_000}])
         if path.endswith("/ids"):
             assert request.url.params["queue"] == "420"
-            return httpx.Response(200, json=[f"BR1_{i}" for i in range(5)])
+            since = int(request.url.params["startTime"])
+            # 5 partidas, uma por hora até agora; a Riot manda da mais nova para a mais antiga
+            return httpx.Response(200, json=[f"BR1_{i}" for i in reversed(range(5)) if match_start(i) >= since])
         if path.endswith("/timeline"):
             return httpx.Response(200, json=make_timeline("mono", AP_PURCHASES, SKILLS))
         if "/lol/match/v5/matches/" in path:
@@ -278,7 +287,7 @@ def riot_transport(key_ok: bool = True) -> httpx.MockTransport:
             return httpx.Response(200, json=make_match(match_id, [
                 player("mono", MALPHITE, "MIDDLE", True, [3089, 3157, 6653]),
                 player("outro", JINX, "BOTTOM", False, [3031], pid=2),
-            ]))
+            ], start_ms=match_start(int(match_id.split("_")[1])) * 1000))
         return httpx.Response(404)
 
     return httpx.MockTransport(handler)
@@ -318,6 +327,34 @@ def test_coleta_encontra_o_monochamp_grava_e_publica() -> None:
     assert build["boots"]["name"] == "Sapatos do Feiticeiro"
     assert build["skills"] == SKILLS and build["maxOrder"] == "Q > E > W"
     assert build["championIconUrl"].endswith("/img/champion/Malphite.png")
+
+
+def test_coleta_continua_de_onde_parou_sem_repetir() -> None:
+    store = InMemoryScienceStore()
+    store.progress["br1"] = {"mono": match_start(2) + 1}  # já leu até a BR1_2
+
+    first = collect(store)
+    assert (first.matches, first.samples) == (2, 2)  # só BR1_3 e BR1_4
+    assert store.progress["br1"]["mono"] == int(NOW.timestamp())
+    assert set(store.seen["americas"]) == {"BR1_3", "BR1_4"}
+
+    again = collect(store)
+    assert (again.matches, again.samples) == (0, 0)
+
+
+def test_quem_esta_ha_mais_tempo_sem_ler_vem_primeiro() -> None:
+    players = [Monochamp("lido", 1), Monochamp("nunca", 2), Monochamp("antigo", 3)]
+    order = harvest_order(players, {"lido": 300, "antigo": 100})
+    assert [m.puuid for m in order] == ["nunca", "antigo", "lido"]
+
+
+def test_partida_ja_contada_nao_entra_de_novo_na_base() -> None:
+    store = InMemoryScienceStore()
+    store.seen["americas"] = {f"BR1_{i}": match_start(i) for i in range(5)}  # contadas por outro monochamp
+
+    report = collect(store)
+
+    assert (report.matches, report.samples) == (0, 5)  # a build dele conta; a base não
 
 
 def test_troca_de_chave_refaz_a_lista_de_monochamps() -> None:

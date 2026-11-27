@@ -12,7 +12,7 @@ App Android particular, feito para um grupo pequeno de amigos que jogam League o
 - **Busca por Riot ID**: elo, nível do invocador e maestrias de campeões.
 - **Histórico de partidas**: rolagem infinita com cache offline.
 - **Squads**: cada pessoa vincula o próprio Riot ID e entra num grupo por código de convite. O grupo tem um ranking semanal, e uma notificação push anuncia o vencedor da semana.
-- **Ciências**: uma vez por dia, uma coleta analisa as partidas ranqueadas recentes de monochamps Desafiante e Grão-Mestre de 12 regiões e destaca builds incomuns que estão ganhando (itens, ordem de habilidades, runa).
+- **Ciências**: a cada 3 horas, uma coleta analisa as partidas ranqueadas recentes de monochamps Desafiante e Grão-Mestre de 12 regiões e destaca builds incomuns que estão ganhando (itens, ordem de habilidades, runa).
 
 ## Arquitetura
 
@@ -24,7 +24,7 @@ App Flutter ──HTTP──▶ Backend proxy (FastAPI) ──HTTP + chave──
      └── Firebase: login, leitura do Firestore, notificações (FCM)
 
 GitHub Actions (agendado) ──▶ proxy: atualiza o ranking de hora em hora e fecha a semana
-GitHub Actions (06:30 BRT) ──▶ coleta das Ciências ──▶ Firestore (sciences/current)
+GitHub Actions (a cada 3 h) ──▶ coleta das Ciências ──▶ Firestore (sciences/current)
 ```
 
 O app **nunca** tem acesso à chave da API: se ela estivesse no APK, qualquer pessoa poderia extraí-la. Todos os pedidos à Riot passam pelo proxy, publicado no Render.

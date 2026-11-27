@@ -1,11 +1,11 @@
-"""Coleta diária das Ciências (roda no GitHub Actions).
+"""Coleta das Ciências (roda no GitHub Actions a cada 3 horas).
 
     uv run python -m app.science.collect --minutes 45
 
 1. Monochamps: Desafiante e Grão-Mestre de cada plataforma cuja maestria
    no campeão principal é muito maior que no segundo (refeito a cada 7 dias).
-2. Partidas: as ranqueadas mais recentes de cada monochamp (desde a última
-   coleta). Da partida sai a base de comparação (os 10 jogadores); da linha
+2. Partidas: as ranqueadas de cada monochamp desde onde a leitura dele parou
+   (quem está há mais tempo sem ler vem primeiro). Da partida sai a base de comparação (os 10 jogadores); da linha
    do tempo, a build do monochamp, se ele estava no campeão principal.
 3. Grava os contadores, compara o patch atual com o anterior e publica
    `sciences/current`.
@@ -42,7 +42,7 @@ LANGUAGE = "pt_BR"
 MONOCHAMPS_MAX_AGE = timedelta(days=7)
 FIRST_LOOKBACK = timedelta(days=3)
 MAX_LOOKBACK = timedelta(days=7)
-MATCHES_PER_PLAYER = 5
+MATCHES_PER_PLAYER = 20      # por coleta; com coletas frequentes, cobre todas as partidas
 MIN_MASTERY = 200_000
 MASTERY_RATIO = 2.5          # campeão principal com 2,5x os pontos do segundo
 RECENT_PLAY = timedelta(days=30)
@@ -58,6 +58,17 @@ class Report:
     key_rejected: bool = False
     out_of_time: bool = False
     errors: list[str] = field(default_factory=list)
+
+
+@dataclass(slots=True)
+class Progress:
+    """Até onde cada jogador já foi lido e quais partidas já entraram na base.
+    Tempos em segundos (epoch), como o `startTime` da Riot."""
+    now: int
+    fallback: int                  # quem ainda não tem "lido até": desde a última coleta
+    oldest: int                    # nunca mais antigo que MAX_LOOKBACK
+    since: dict[str, int] = field(default_factory=dict)             # puuid → lido até
+    seen: dict[str, dict[str, int]] = field(default_factory=dict)  # região → partida → início
 
 
 class Deadline:
@@ -140,36 +151,50 @@ async def _discover(
     return found
 
 
+def harvest_order(players: list[Monochamp], since: dict[str, int]) -> list[Monochamp]:
+    """Quem está há mais tempo sem ser lido vem primeiro (quem nunca foi, antes
+    de todos). Empate: sorteio, para não favorecer uma plataforma."""
+    shuffled = random.sample(players, len(players))
+    return sorted(shuffled, key=lambda m: since.get(m.puuid, 0))
+
+
 async def _harvest(
     riot: ScienceRiot,
     region: str,
     players: list[Monochamp],
-    start_time: int,
+    progress: Progress,
     agg: Aggregator,
     catalog: ItemCatalog,
     report: Report,
     stop: Callable[[], bool],
 ) -> None:
-    seen: set[str] = set()
-    for mono in players:
+    """Continua de onde parou: cada jogador tem o seu "lido até" (`progress.since`),
+    que avança partida a partida (da mais antiga para a mais nova). Se o tempo
+    acaba no meio, a próxima coleta retoma dali, sem pular nem repetir."""
+    seen = progress.seen.setdefault(region, {})
+    for mono in harvest_order(players, progress.since):
         if stop():
             report.out_of_time = True
             return
+        start_time = max(progress.since.get(mono.puuid, progress.fallback), progress.oldest)
         try:
             ids = await riot.ranked_match_ids(region, mono.puuid, start_time, MATCHES_PER_PLAYER)
         except (NotFoundError, BadRequestError):
             continue
-        for match_id in ids:
+        for match_id in reversed(ids):  # a Riot manda da mais nova para a mais antiga
             if stop():
                 report.out_of_time = True
                 return
             try:
                 match = await riot.match(region, match_id)
+                started = match["info"].get("gameStartTimestamp", 0) // 1000
                 if match_id not in seen:  # a base de comparação conta cada partida uma vez
-                    seen.add(match_id)
+                    seen[match_id] = started or progress.now
                     report.matches += 1
                     for game in champion_games(match, catalog):
                         agg.add_champion_game(game)
+                if started:
+                    progress.since[mono.puuid] = started + 1
                 player = next((p for p in match["info"]["participants"] if p["puuid"] == mono.puuid), None)
                 if player is None or player["championId"] != mono.champion_id:
                     continue
@@ -183,6 +208,7 @@ async def _harvest(
                 continue
             if sample is not None:
                 agg.add_sample(sample)
+        progress.since[mono.puuid] = progress.now  # leu tudo até agora
 
 
 def _patch(version: str) -> str:
@@ -252,8 +278,21 @@ async def run(
     agg = Aggregator()
 
     cursor = await store.get_cursor()
-    start = max(cursor or now - FIRST_LOOKBACK, now - MAX_LOOKBACK)
-    start_time = int(start.timestamp())
+    oldest = int((now - MAX_LOOKBACK).timestamp())
+    progress = Progress(
+        now=int(now.timestamp()),
+        fallback=int((cursor or now - FIRST_LOOKBACK).timestamp()),
+        oldest=oldest,
+    )
+    by_region: dict[str, list[str]] = {}
+    owners: dict[str, str] = {}  # puuid → plataforma (para gravar o progresso)
+    for platform, region in platforms.items():
+        by_region.setdefault(region, []).append(platform)
+        saved = await store.get_progress(platform)
+        progress.since.update(saved)
+        owners.update(dict.fromkeys(saved, platform))
+    for region in by_region:
+        progress.seen[region] = await store.get_seen(region)
 
     def discovery_over() -> bool:
         return deadline.passed(DISCOVERY_SHARE, seconds)
@@ -262,14 +301,12 @@ async def run(
         # Cada região começa a ler partidas assim que as SUAS plataformas
         # terminam a busca de monochamps (sem esperar as outras regiões).
         found = await asyncio.gather(*(_discover(riot, store, p, now, discovery_over) for p in region_platforms))
+        for platform, group in zip(region_platforms, found, strict=True):
+            owners.update({m.puuid: platform for m in group})
         players = [m for group in found for m in group]
         report.monochamps += len(players)
-        random.shuffle(players)  # sem tempo para todos: amostra justa entre plataformas
-        await _harvest(riot, region, players, start_time, agg, catalog, report, deadline.passed)
+        await _harvest(riot, region, players, progress, agg, catalog, report, deadline.passed)
 
-    by_region: dict[str, list[str]] = {}
-    for platform, region in platforms.items():
-        by_region.setdefault(region, []).append(platform)
     try:
         await asyncio.gather(*(region_job(r, ps) for r, ps in by_region.items()))
     except KeyRejectedError as e:
@@ -277,8 +314,12 @@ async def run(
         report.key_rejected = True
 
     report.samples = agg.samples
-    if agg.builds or agg.champions:
-        await store.save_aggregates(agg, now)
+    since_by_platform: dict[str, dict[str, int]] = {p: {} for p in platforms}
+    for puuid, platform in owners.items():
+        if progress.since.get(puuid, 0) >= oldest:  # mais velho que isso não importa mais
+            since_by_platform[platform][puuid] = progress.since[puuid]
+    seen = {r: {m: t for m, t in ids.items() if t >= oldest} for r, ids in progress.seen.items()}
+    await store.save_aggregates(agg, now, since_by_platform, seen)
     report.sciences = await publish(store, static, now)
     return report
 

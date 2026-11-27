@@ -1,7 +1,9 @@
 """Persistência das Ciências no Firestore.
 
   scienceMonochamps/{plataforma}   lista de monochamps (refeita a cada 7 dias)
-  scienceMeta/collector            até quando as partidas já foram coletadas
+  scienceMeta/collector            última coleta (ponto de partida de quem não tem progresso)
+  scienceProgress/{plataforma}     até onde as partidas de cada monochamp foram lidas
+  scienceSeen/{região}             partidas já contadas na base (não contar duas vezes)
   scienceBuilds/{patch_campeão_rota_item1_item2}   contadores da build
   scienceChampions/{patch_campeão}  base de comparação (rotas e itens de todos)
   sciencePatches/{patch}           buffs e nerfs detectados (uso interno)
@@ -22,6 +24,8 @@ BUILDS = "scienceBuilds"
 CHAMPIONS = "scienceChampions"
 PATCHES = "sciencePatches"
 PUBLISHED = "sciences"
+PROGRESS = "scienceProgress"  # scienceProgress/{plataforma}: até onde cada monochamp foi lido
+SEEN = "scienceSeen"          # scienceSeen/{região}: partidas já contadas (últimos 7 dias)
 _BATCH = 400  # o Firestore aceita até 500 operações por lote
 
 
@@ -38,8 +42,19 @@ class ScienceStore(Protocol):
 
     async def get_cursor(self) -> datetime | None: ...
 
-    async def save_aggregates(self, agg: Aggregator, cursor: datetime) -> None:
-        """Soma os contadores e avança o cursor (só depois de tudo gravado)."""
+    async def get_progress(self, platform: str) -> dict[str, int]:
+        """puuid → até quando (epoch s) as partidas dele já foram lidas."""
+        ...
+
+    async def get_seen(self, region: str) -> dict[str, int]:
+        """Partidas já contadas na base de comparação (id → início, epoch s)."""
+        ...
+
+    async def save_aggregates(
+        self, agg: Aggregator, cursor: datetime,
+        progress: dict[str, dict[str, int]], seen: dict[str, dict[str, int]],
+    ) -> None:
+        """Soma os contadores e, só depois de tudo gravado, o progresso."""
         ...
 
     async def list_builds(self, patches: list[str]) -> list[BuildStats]: ...
@@ -75,7 +90,18 @@ class FirestoreScienceStore:
         snap = await self._db.collection(META).document("collector").get()
         return snap.to_dict().get("cursor") if snap.exists else None
 
-    async def save_aggregates(self, agg: Aggregator, cursor: datetime) -> None:
+    async def get_progress(self, platform: str) -> dict[str, int]:
+        snap = await self._db.collection(PROGRESS).document(platform).get()
+        return dict(snap.to_dict().get("since", {})) if snap.exists else {}
+
+    async def get_seen(self, region: str) -> dict[str, int]:
+        snap = await self._db.collection(SEEN).document(region).get()
+        return dict(snap.to_dict().get("matches", {})) if snap.exists else {}
+
+    async def save_aggregates(
+        self, agg: Aggregator, cursor: datetime,
+        progress: dict[str, dict[str, int]], seen: dict[str, dict[str, int]],
+    ) -> None:
         from google.cloud.firestore import Increment
 
         def inc(counter: Counter[Any]) -> dict[str, Any]:
@@ -100,6 +126,11 @@ class FirestoreScienceStore:
             for ref, data in writes[start:start + _BATCH]:
                 batch.set(ref, data, merge=True)  # merge + Increment: soma ao que já existe
             await batch.commit()
+        # set sem merge: substitui o mapa inteiro (já vem podado pela coleta)
+        for platform, since in progress.items():
+            await self._db.collection(PROGRESS).document(platform).set({"since": since})
+        for region, matches in seen.items():
+            await self._db.collection(SEEN).document(region).set({"matches": matches})
         await self._db.collection(META).document("collector").set({"cursor": cursor}, merge=True)
 
     async def list_builds(self, patches: list[str]) -> list[BuildStats]:
