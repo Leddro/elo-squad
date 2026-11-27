@@ -1,0 +1,29 @@
+# Atualizações automáticas: abre PR quando sai versão nova.
+version: 2
+updates:
+  # Actions fixadas por SHA nos workflows.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]
+
+  # Dependências do proxy (uv.lock).
+  - package-ecosystem: uv
+    directory: /backend
+    schedule:
+      interval: weekly
+    groups:
+      backend:
+        patterns: ["*"]
+
+  # Pacotes do app (pubspec.lock).
+  - package-ecosystem: pub
+    directory: /app
+    schedule:
+      interval: weekly
+    groups:
+      app:
+        patterns: ["*"]
