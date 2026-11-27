@@ -9,11 +9,11 @@ import httpx
 
 from app.science.aggregate import Aggregator, BuildStats, ChampionStats
 from app.science.collect import StaticData, harvest_order, is_monochamp, run
-from app.science.extract import champion_games, extract_build
+from app.science.extract import champion_games, extract_build, match_bans
 from app.science.items import ItemCatalog
 from app.science.patch_diff import PatchChanges, diff_champions, diff_items
 from app.science.riot import RateLimiter, ScienceRiot
-from app.science.scoring import max_order, pick_sciences, wilson_lower_bound
+from app.science.scoring import Science, assign_tiers, max_order, pick_sciences, wilson_lower_bound
 from app.science.store import Monochamp
 from fake_science_store import InMemoryScienceStore
 
@@ -175,10 +175,37 @@ def test_previa_completa_a_lista_depois_das_ciencias() -> None:
 
     sciences = pick_sciences(builds, [baseline()], PatchChanges(), CATALOG, names, fill_to=3)
 
-    assert sciences[0].items[:2] == [3089, 3157]  # a Ciência de verdade vem primeiro
+    assert [3089, 3157] in [s.items[:2] for s in sciences]  # a Ciência de verdade entra
     assert len(sciences) == 3                     # a comum e a de poucas partidas completam
     assert all(s.games != 20 for s in sciences)   # perdendo continua de fora
     assert len(pick_sciences(builds, [baseline()], PatchChanges(), CATALOG, names, fill_to=1)) == 1
+
+
+def test_tier_pelo_win_pick_e_ban_rate() -> None:
+    def science(games: int, wins: int, pick: float, ban: float) -> Science:
+        return Science(MALPHITE, "MIDDLE", f"{wins}/{games}", [], None, "", "", games, wins, 0.0, pick, ban)
+
+    ranked = assign_tiers([
+        science(10, 5, 0.01, 0.0),   # ganha pouco
+        science(40, 30, 0.08, 0.3),  # ganha muito, muito jogado e banido
+        science(40, 30, 0.01, 0.0),  # ganha muito, pouco jogado
+    ] + [science(20, 11, 0.02, 0.05) for _ in range(7)])
+
+    assert [s.title for s in ranked[:2]] == ["30/40", "30/40"]
+    assert ranked[0].pick_rate == 0.08 and ranked[0].tier == "S"
+    assert ranked[-1].title == "5/10" and ranked[-1].tier == "D"
+    assert [s.tier for s in ranked].count("S") == 1
+
+
+def test_bans_da_partida() -> None:
+    match = make_match("BR1_1", [])
+    match["info"]["teams"] = [{"bans": [{"championId": MALPHITE}, {"championId": -1}]},
+                              {"bans": [{"championId": JINX}]}]
+    agg = Aggregator()
+    bans = match_bans(match)
+    assert bans == ("16.23", {MALPHITE, JINX})
+    agg.add_bans(*bans)
+    assert agg.ban_matches["16.23"] == 1 and agg.champions["16.23_54"].bans == 1
 
 
 def test_buff_no_patch_sobe_a_ciencia() -> None:

@@ -7,7 +7,7 @@ desconta amostras pequenas). Buffs no patch dão um empurrão pequeno.
 
 import math
 from collections import Counter
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from app.science.aggregate import BuildStats, ChampionStats
 from app.science.items import ItemCatalog
@@ -44,6 +44,40 @@ class Science:
     games: int
     wins: int
     score: float
+    pick_rate: float = 0.0  # partidas do campeão nesta rota / partidas da base
+    ban_rate: float = 0.0   # partidas em que o campeão foi banido / partidas com bans contados
+    tier: str = "C"
+
+
+# Tier: posição relativa entre as Ciências publicadas, pela nota que junta
+# win rate (o que mais pesa), pick rate e ban rate do campeão.
+TIER_WEIGHTS = (0.6, 0.25, 0.15)  # win, pick, ban
+TIER_CUTS = (("S", 0.10), ("A", 0.30), ("B", 0.60), ("C", 0.85), ("D", 1.0))  # fatia acumulada
+
+
+def _z_scores(values: list[float]) -> list[float]:
+    mean = sum(values) / len(values)
+    sd = math.sqrt(sum((v - mean) ** 2 for v in values) / len(values))
+    return [(v - mean) / sd if sd else 0.0 for v in values]
+
+
+def assign_tiers(sciences: list[Science]) -> list[Science]:
+    """Dá o tier (S a D) e ORDENA: melhor tier primeiro. O win rate entra pelo
+    limite de Wilson, para 3 de 3 não valer mais que 30 de 40."""
+    if not sciences:
+        return []
+    win = _z_scores([wilson_lower_bound(s.wins, s.games) for s in sciences])
+    pick = _z_scores([s.pick_rate for s in sciences])
+    ban = _z_scores([s.ban_rate for s in sciences])
+    w_win, w_pick, w_ban = TIER_WEIGHTS
+    notes = [w_win * a + w_pick * b + w_ban * c for a, b, c in zip(win, pick, ban, strict=True)]
+    order = sorted(range(len(sciences)), key=lambda i: notes[i], reverse=True)
+    ranked: list[Science] = []
+    for position, i in enumerate(order):
+        share = (position + 1) / len(order)
+        tier = next(name for name, cut in TIER_CUTS if share <= cut)
+        ranked.append(replace(sciences[i], tier=tier))
+    return ranked
 
 
 def wilson_lower_bound(wins: int, games: int, z: float = 1.645) -> float:
@@ -101,9 +135,13 @@ def pick_sciences(
     catalog: ItemCatalog,
     champion_names: dict[int, str],
     fill_to: int = 0,
+    ban_matches: int = 0,
 ) -> list[Science]:
-    """fill_to > 0 completa a lista com builds "prévia" (ver PREVIEW_FILL)."""
+    """fill_to > 0 completa a lista com builds "prévia" (ver PREVIEW_FILL).
+    Devolve já com tier e ordenada pelo tier (ver assign_tiers)."""
     by_champion = _merge_by_champion(champions)
+    # Cada partida da base tem 10 jogadores (menos os sem rota, raros).
+    base_matches = max(sum(c.games for c in by_champion.values()) / 10, 1)
     candidates: list[tuple[Science, bool]] = []
     previews: list[tuple[Science, bool]] = []
     for build in _merge_by_build(builds):
@@ -136,6 +174,8 @@ def pick_sciences(
             games=build.games,
             wins=build.wins,
             score=wilson_lower_bound(build.wins, build.games) + _patch_bonus(build, items, changes),
+            pick_rate=champ.roles[build.role] / base_matches,
+            ban_rate=champ.bans / ban_matches if ban_matches else 0.0,
         )
         (candidates if strict else previews).append((science, off_role))
 
@@ -160,7 +200,7 @@ def pick_sciences(
         picked.append(science)
         if len(picked) == MAX_SCIENCES:
             break
-    return picked
+    return assign_tiers(picked)
 
 
 def _typical_skills(skills: Counter[str]) -> str:
@@ -186,6 +226,4 @@ def _title(
 
 
 def _with_title(s: Science, title: str) -> Science:
-    return Science(
-        s.champion_id, s.role, title, s.items, s.boots, s.skills, s.max_order, s.games, s.wins, s.score,
-    )
+    return replace(s, title=title)

@@ -54,6 +54,7 @@ class ChampionStats:
     wins: int = 0
     roles: Counter[str] = field(default_factory=Counter)
     items: Counter[int] = field(default_factory=Counter)  # partidas em que o item estava no fim
+    bans: int = 0  # partidas em que foi banido
 
     @property
     def key(self) -> str:
@@ -62,6 +63,7 @@ class ChampionStats:
     def merge(self, other: "ChampionStats") -> None:
         self.games += other.games
         self.wins += other.wins
+        self.bans += other.bans
         self.roles.update(other.roles)
         self.items.update(other.items)
 
@@ -70,7 +72,14 @@ class Aggregator:
     def __init__(self) -> None:
         self.builds: dict[str, BuildStats] = {}
         self.champions: dict[str, ChampionStats] = {}
+        self.ban_matches: Counter[str] = Counter()  # patch → partidas com os bans contados
         self.samples = 0
+
+    def add_bans(self, patch: str, banned: set[int]) -> None:
+        self.ban_matches[patch] += 1
+        for champion_id in banned:
+            key = champion_key(patch, champion_id)
+            self.champions.setdefault(key, ChampionStats(patch, champion_id)).bans += 1
 
     def add_sample(self, s: BuildSample) -> None:
         core = (s.items[0], s.items[1])

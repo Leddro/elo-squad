@@ -26,6 +26,7 @@ PATCHES = "sciencePatches"
 PUBLISHED = "sciences"
 PROGRESS = "scienceProgress"  # scienceProgress/{plataforma}: até onde cada monochamp foi lido
 SEEN = "scienceSeen"          # scienceSeen/{região}: partidas já contadas (últimos 7 dias)
+TOTALS = "scienceTotals"      # scienceTotals/{patch}: partidas com os bans contados
 _BATCH = 400  # o Firestore aceita até 500 operações por lote
 
 
@@ -60,6 +61,10 @@ class ScienceStore(Protocol):
     async def list_builds(self, patches: list[str]) -> list[BuildStats]: ...
 
     async def list_champions(self, patches: list[str]) -> list[ChampionStats]: ...
+
+    async def ban_matches(self, patches: list[str]) -> int:
+        """Partidas em que os bans foram contados (denominador da taxa de ban)."""
+        ...
 
     async def save_patch_changes(self, patch: str, changes: PatchChanges) -> None: ...
 
@@ -119,8 +124,10 @@ class FirestoreScienceStore:
             writes.append((self._db.collection(CHAMPIONS).document(c.key), {
                 "patch": c.patch, "championId": c.champion_id,
                 "games": Increment(c.games), "wins": Increment(c.wins),
-                "roles": inc(c.roles), "items": inc(c.items),
+                "roles": inc(c.roles), "items": inc(c.items), "bans": Increment(c.bans),
             }))
+        for patch, matches in agg.ban_matches.items():
+            writes.append((self._db.collection(TOTALS).document(patch), {"banMatches": Increment(matches)}))
         for start in range(0, len(writes), _BATCH):
             batch = self._db.batch()
             for ref, data in writes[start:start + _BATCH]:
@@ -160,8 +167,16 @@ class FirestoreScienceStore:
             out.append(ChampionStats(
                 d["patch"], d["championId"], d.get("games", 0), d.get("wins", 0),
                 Counter(d.get("roles", {})), Counter({int(k): v for k, v in d.get("items", {}).items()}),
+                d.get("bans", 0),
             ))
         return out
+
+    async def ban_matches(self, patches: list[str]) -> int:
+        total = 0
+        for patch in patches:
+            snap = await self._db.collection(TOTALS).document(patch).get()
+            total += snap.to_dict().get("banMatches", 0) if snap.exists else 0
+        return total
 
     async def save_patch_changes(self, patch: str, changes: PatchChanges) -> None:
         await self._db.collection(PATCHES).document(patch).set({

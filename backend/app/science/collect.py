@@ -28,7 +28,7 @@ import httpx
 
 from app.errors import NotFoundError, UpstreamError
 from app.science.aggregate import Aggregator
-from app.science.extract import champion_games, extract_build
+from app.science.extract import champion_games, extract_build, match_bans
 from app.science.items import ItemCatalog
 from app.science.patch_diff import PatchChanges, diff_champions, diff_items
 from app.science.riot import PLATFORMS, BadRequestError, KeyRejectedError, ScienceRiot
@@ -193,6 +193,8 @@ async def _harvest(
                     report.matches += 1
                     for game in champion_games(match, catalog):
                         agg.add_champion_game(game)
+                    if bans := match_bans(match):
+                        agg.add_bans(*bans)
                 if started:
                     progress.since[mono.puuid] = started + 1
                 player = next((p for p in match["info"]["participants"] if p["puuid"] == mono.puuid), None)
@@ -229,6 +231,7 @@ async def publish(store: ScienceStore, static: StaticData, now: datetime) -> int
     sciences = pick_sciences(
         await store.list_builds(patches), await store.list_champions(patches), changes, catalog,
         {cid: c["name"] for cid, c in by_id.items()}, fill_to=PREVIEW_FILL,
+        ban_matches=await store.ban_matches(patches),
     )
 
     def item(item_id: int) -> dict[str, Any]:
@@ -256,6 +259,10 @@ async def publish(store: ScienceStore, static: StaticData, now: datetime) -> int
                 "maxOrder": s.max_order,
                 "games": s.games,
                 "wins": s.wins,
+                "tier": s.tier,
+                "winRate": s.wins / s.games if s.games else 0.0,
+                "pickRate": s.pick_rate,
+                "banRate": s.ban_rate,
             }
             for s in sciences
         ],

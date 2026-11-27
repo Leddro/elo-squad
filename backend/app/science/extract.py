@@ -106,6 +106,15 @@ def extract_build(
     )
 
 
+def match_bans(match: dict[str, Any]) -> tuple[str, set[int]] | None:
+    """Patch e campeões banidos na partida (-1 = ninguém banido naquela vez)."""
+    info = match["info"]
+    if not _usable(info):
+        return None
+    banned = {b["championId"] for t in info.get("teams", []) for b in t.get("bans", []) if b.get("championId", -1) > 0}
+    return patch_of(info["gameVersion"]), banned
+
+
 def champion_games(match: dict[str, Any], catalog: ItemCatalog) -> list[ChampionGame]:
     """Os 10 jogadores da partida (não precisa da linha do tempo): rota e itens finais."""
     info = match["info"]
