@@ -2,6 +2,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../../../core/presentation/widgets/network_avatar.dart';
 import '../../domain/entities/science.dart';
+import 'role_icon.dart';
 
 /// Uma Ciência: campeão, rota, título, itens em ordem e habilidades.
 class ScienceCard extends StatelessWidget {
@@ -31,15 +32,27 @@ class ScienceCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(science.title, style: text.titleMedium),
-                      Text(
-                        '${science.championName} · ${science.role.label}',
-                        style: text.bodySmall,
+                      Row(
+                        spacing: 6,
+                        children: [
+                          RoleIcon(role: science.role, size: 16),
+                          Flexible(
+                            child: Text(
+                              science.championName,
+                              style: text.bodySmall,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
                 ),
+                TierBadge(tier: science.tier),
               ],
             ),
+            const SizedBox(height: 10),
+            _Rates(science: science),
             const SizedBox(height: 12),
             Text('Itens', style: text.labelMedium),
             const SizedBox(height: 4),
@@ -56,6 +69,43 @@ class ScienceCard extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Win rate da build, pick rate e ban rate do campeão (rota) no elo alto.
+class _Rates extends StatelessWidget {
+  const _Rates({required this.science});
+
+  final ScienceBuild science;
+
+  static String _percent(double value) =>
+      '${(value * 100).toStringAsFixed(1).replaceAll('.', ',')}%';
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    Widget stat(String label, String value, {String? hint}) => Expanded(
+      child: Tooltip(
+        message: hint ?? label,
+        child: Column(
+          children: [
+            Text(value, style: text.titleSmall),
+            Text(label, style: text.labelSmall),
+          ],
+        ),
+      ),
+    );
+    return Row(
+      children: [
+        stat(
+          'Win rate',
+          _percent(science.winRate),
+          hint: '${science.games} partidas com esta build',
+        ),
+        stat('Pick rate', _percent(science.pickRate)),
+        stat('Ban rate', _percent(science.banRate)),
+      ],
     );
   }
 }

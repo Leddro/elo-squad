@@ -7,7 +7,7 @@ import '../../domain/entities/science.dart';
 part 'science_dtos.freezed.dart';
 part 'science_dtos.g.dart';
 
-/// Documento sciences/current, publicado pela coleta diária (backend).
+/// Documento sciences/current, publicado pela coleta (backend).
 @freezed
 abstract class SciencesBoardDto with _$SciencesBoardDto {
   const SciencesBoardDto._();
@@ -44,6 +44,12 @@ abstract class ScienceBuildDto with _$ScienceBuildDto {
     required ScienceItemDto? boots,
     required String skills,
     required String maxOrder,
+    // Opcionais: documentos publicados antes do tier não têm.
+    String? tier,
+    @Default(0) int games,
+    @Default(0) double winRate,
+    @Default(0) double pickRate,
+    @Default(0) double banRate,
   }) = _ScienceBuildDto;
 
   factory ScienceBuildDto.fromJson(Json json) =>
@@ -61,6 +67,11 @@ abstract class ScienceBuildDto with _$ScienceBuildDto {
       boots: boots?.toEntity(),
       skills: skills,
       maxOrder: maxOrder,
+      tier: ScienceTier.fromLabel(tier),
+      games: games,
+      winRate: winRate,
+      pickRate: pickRate,
+      banRate: banRate,
     );
   }
 }

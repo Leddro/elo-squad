@@ -5,6 +5,7 @@ import '../../../../core/presentation/failure_messages.dart';
 import '../../../../core/presentation/formatters.dart';
 import '../../domain/entities/science.dart';
 import '../providers/science_providers.dart';
+import '../widgets/role_icon.dart';
 import '../widgets/science_card.dart';
 
 /// Aba Ciências: builds incomuns de monochamps de elite que estão ganhando.
@@ -67,7 +68,11 @@ class _BuildList extends ConsumerWidget {
     final shown = [
       for (final b in builds)
         if (role == null || b.role == role) b,
-    ];
+    ]..sort((a, b) => a.tier.index.compareTo(b.tier.index)); // estável
+    final byTier = <ScienceTier, List<ScienceBuild>>{};
+    for (final b in shown) {
+      byTier.putIfAbsent(b.tier, () => []).add(b);
+    }
     final filter = ref.read(scienceRoleFilterProvider.notifier);
     return CustomScrollView(
       slivers: [
@@ -85,7 +90,8 @@ class _BuildList extends ConsumerWidget {
                 ),
                 for (final r in ScienceRole.values)
                   ChoiceChip(
-                    label: Text(r.label),
+                    label: RoleIcon(role: r),
+                    showCheckmark: false,
                     selected: role == r,
                     onSelected: (_) => filter.select(r),
                   ),
@@ -103,14 +109,45 @@ class _BuildList extends ConsumerWidget {
             ),
           )
         else
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(8, 0, 8, 16),
-            sliver: SliverList.builder(
-              itemCount: shown.length,
-              itemBuilder: (_, i) => ScienceCard(science: shown[i]),
+          for (final MapEntry(key: tier, value: group) in byTier.entries) ...[
+            SliverToBoxAdapter(child: _TierHeader(tier: tier)),
+            SliverPadding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              sliver: SliverList.builder(
+                itemCount: group.length,
+                itemBuilder: (_, i) => ScienceCard(science: group[i]),
+              ),
             ),
-          ),
+          ],
+        const SliverToBoxAdapter(child: SizedBox(height: 16)),
       ],
+    );
+  }
+}
+
+/// Cabeçalho de cada faixa: "Tier S" com a cor do tier e uma linha.
+class _TierHeader extends StatelessWidget {
+  const _TierHeader({required this.tier});
+
+  final ScienceTier tier;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = TierBadge.colorOf(tier);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+      child: Row(
+        spacing: 10,
+        children: [
+          TierBadge(tier: tier, size: 24),
+          Text(
+            'Tier ${tier.label}',
+            style: Theme.of(context).textTheme.titleSmall
+                ?.copyWith(color: color),
+          ),
+          Expanded(child: Divider(color: color.withValues(alpha: 0.4))),
+        ],
+      ),
     );
   }
 }
