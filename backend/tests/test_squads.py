@@ -306,3 +306,22 @@ def test_so_o_lider_troca_o_nome_403(client: TestClient) -> None:
     join(client, "b", ref["inviteCode"])
     r = client.put(f"/squads/{ref['id']}/info", json={"name": "Hack"}, headers=auth("b"))
     assert r.status_code == 403
+
+
+LEGACY_TOKEN = "dGVzdGU:APA91b" + "x" * 140  # token clássico: longo e com ":"
+FID = "cXk9Qz1vT2pLbW5vcHFyc3"  # Installation ID: 22 caracteres
+
+
+def test_installation_id_substitui_o_token_classico(client: TestClient, store: InMemoryStore) -> None:
+    # O APK antigo mandou o token clássico; o atualizado manda o Installation ID.
+    client.post("/me/fcm-tokens", json={"token": LEGACY_TOKEN}, headers=auth("a"))
+    client.post("/me/fcm-tokens", json={"token": FID}, headers=auth("a"))
+
+    assert store.users["a"].fcm_tokens == [FID]
+
+
+def test_token_classico_convive_com_outros(client: TestClient, store: InMemoryStore) -> None:
+    client.post("/me/fcm-tokens", json={"token": FID}, headers=auth("a"))
+    client.post("/me/fcm-tokens", json={"token": LEGACY_TOKEN}, headers=auth("a"))
+
+    assert store.users["a"].fcm_tokens == [FID, LEGACY_TOKEN]

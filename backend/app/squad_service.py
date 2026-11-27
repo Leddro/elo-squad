@@ -6,6 +6,7 @@ from datetime import UTC, datetime
 
 from app.auth import AuthUser
 from app.errors import NotSquadOwnerError, RiotIdRequiredError, SquadFullError, SquadLimitError, SquadNotFoundError
+from app.notifier import is_installation_id
 from app.models import LinkRiotIdResponse, Squad, SquadMember, SquadRef, UserRecord
 from app.service import SummonerService
 from app.store import Store
@@ -52,6 +53,12 @@ class SquadService:
 
     async def add_fcm_token(self, user: AuthUser, token: str) -> None:
         await self._store.add_fcm_token(user.uid, token)
+        if is_installation_id(token):
+            # App atualizado para o Installation ID: o token clássico desta conta
+            # (do mesmo aparelho, no APK antigo) mandaria a notificação em dobro.
+            legacy = [t for t in (await self._store.get_fcm_tokens([user.uid])).get(user.uid, []) if not is_installation_id(t)]
+            if legacy:
+                await self._store.remove_fcm_tokens(user.uid, legacy)
 
     async def remove_fcm_token(self, user: AuthUser, token: str) -> None:
         await self._store.remove_fcm_tokens(user.uid, [token])

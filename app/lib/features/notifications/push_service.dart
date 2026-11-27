@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:dio/dio.dart';
+import 'package:firebase_app_installations/firebase_app_installations.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -12,14 +13,14 @@ typedef PushMessage = ({String title, String body, String? squadId});
 
 /// Notificações push (FCM): registro do aparelho e mensagens recebidas.
 abstract interface class PushService {
-  /// Pede permissão, manda o token do aparelho ao proxy e acompanha a troca
-  /// de token. Nunca lança: sem permissão ou sem rede, o app segue sem push.
+  /// Pede permissão, registra o aparelho no FCM, manda o Installation ID ao
+  /// proxy e acompanha a troca dele. Nunca lança: sem permissão ou sem rede, o app segue sem push.
   Future<void> register();
 
   /// Chamado ANTES do logout (ainda autenticado): desliga o aparelho da conta
-  /// no proxy e descarta o token local, para a próxima conta ganhar um novo.
+  /// no proxy e cancela o registro local, para a próxima conta ganhar outro.
   /// Nunca lança: sem rede, o logout segue (o proxy limpa o token antigo
-  /// quando ele trocar de conta ou deixar de valer).
+  /// quando o ID trocar de conta ou deixar de valer).
   Future<void> unregister();
 
   /// Notificações que chegam com o app ABERTO (o sistema não mostra nada
@@ -31,12 +32,16 @@ abstract interface class PushService {
 }
 
 final class FcmPushService implements PushService {
-  FcmPushService(this._messaging, this._dio);
+  FcmPushService(this._messaging, this._dio, {required this.installationId});
 
   final FirebaseMessaging _messaging;
   final Dio _dio;
-  StreamSubscription<String>? _tokenRefresh;
-  String? _token; // o último token enviado ao proxy
+
+  /// Installation ID (FID) do app neste aparelho: o alvo do envio no FCM.
+  final Future<String> Function() installationId;
+
+  StreamSubscription<String>? _registered;
+  String? _target; // o último ID enviado ao proxy
 
   @override
   Future<void> register() async {
@@ -45,15 +50,12 @@ final class FcmPushService implements PushService {
       final settings = await _messaging.requestPermission();
       if (settings.authorizationStatus == AuthorizationStatus.denied) return;
 
-      // getToken/onTokenRefresh estão descontinuados no firebase_messaging 17
-      // (a API nova, register/onRegistered, usa o Installation ID). O proxy
-      // envia pelo token clássico do firebase-admin, que segue funcionando.
-      // TODO: migrar quando o envio por Installation ID for confirmado no proxy.
-      // ignore: deprecated_member_use
-      final token = await _messaging.getToken();
-      if (token != null) await _send(token);
-      // ignore: deprecated_member_use
-      _tokenRefresh ??= _messaging.onTokenRefresh.listen(_send);
+      // onRegistered avisa quando o FCM troca o ID; escuta antes de registrar.
+      _registered ??= _messaging.onRegistered.listen(_send);
+      await _messaging.register();
+      // O evento pode ter saído antes de o Dart escutar (o Android guarda o
+      // último): pedir o ID direto garante o envio.
+      await _send(await installationId());
     } on Object catch (error) {
       debugPrint('Push: registro falhou ($error)');
     }
@@ -61,36 +63,35 @@ final class FcmPushService implements PushService {
 
   @override
   Future<void> unregister() async {
-    await _tokenRefresh?.cancel();
-    _tokenRefresh = null;
-    final token = _token;
-    _token = null;
-    if (token == null) return; // nunca registrou (sem permissão, por ex.)
+    await _registered?.cancel();
+    _registered = null;
+    final target = _target;
+    _target = null;
+    if (target == null) return; // nunca registrou (sem permissão, por ex.)
 
     try {
       await _dio
-          .delete<void>('/me/fcm-tokens/${Uri.encodeComponent(token)}')
+          .delete<void>('/me/fcm-tokens/${Uri.encodeComponent(target)}')
           .timeout(_unregisterTimeout);
     } on Object catch (error) {
-      debugPrint('Push: não consegui remover o token no proxy ($error)');
+      debugPrint('Push: não consegui remover o ID no proxy ($error)');
     }
     try {
-      // O token antigo deixa de valer: mesmo que o proxy não tenha sido
-      // avisado, o envio para ele falha e o proxy o apaga.
-      // Par do getToken (mesmo motivo do ignore lá em cima).
-      // ignore: deprecated_member_use
-      await _messaging.deleteToken().timeout(_unregisterTimeout);
+      // O FCM para de entregar neste aparelho: mesmo que o proxy não tenha
+      // sido avisado, o envio falha e o proxy apaga o ID.
+      await _messaging.unregister().timeout(_unregisterTimeout);
     } on Object catch (error) {
-      debugPrint('Push: não consegui descartar o token local ($error)');
+      debugPrint('Push: não consegui cancelar o registro local ($error)');
     }
   }
 
   static const _unregisterTimeout = Duration(seconds: 5);
 
-  Future<void> _send(String token) async {
+  Future<void> _send(String id) async {
+    if (id == _target) return; // onRegistered e o pedido direto dão o mesmo
     try {
-      await _dio.post<void>('/me/fcm-tokens', data: {'token': token});
-      _token = token;
+      await _dio.post<void>('/me/fcm-tokens', data: {'token': id});
+      _target = id;
     } on Object catch (error) {
       debugPrint('Push: não consegui enviar o token ($error)');
     }
@@ -118,7 +119,11 @@ final class FcmPushService implements PushService {
 }
 
 final pushServiceProvider = Provider<PushService>(
-  (ref) => FcmPushService(FirebaseMessaging.instance, ref.watch(dioProvider)),
+  (ref) => FcmPushService(
+    FirebaseMessaging.instance,
+    ref.watch(dioProvider),
+    installationId: FirebaseInstallations.instance.getId,
+  ),
 );
 
 extension<T> on Stream<T> {
