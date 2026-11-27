@@ -31,7 +31,7 @@ from app.science.aggregate import Aggregator
 from app.science.extract import champion_games, extract_build
 from app.science.items import ItemCatalog
 from app.science.patch_diff import PatchChanges, diff_champions, diff_items
-from app.science.riot import PLATFORMS, KeyRejectedError, ScienceRiot
+from app.science.riot import PLATFORMS, BadRequestError, KeyRejectedError, ScienceRiot
 from app.science.scoring import PREVIEW_FILL, ROLE_NAMES, pick_sciences
 from app.science.store import Monochamp, ScienceStore
 
@@ -103,11 +103,24 @@ def is_monochamp(masteries: list[dict[str, Any]], now: datetime) -> bool:
     )
 
 
+async def _ids_valid(riot: ScienceRiot, platform: str, players: list[Monochamp]) -> bool:
+    """O PUUID é criptografado POR CHAVE: trocou a chave, a lista salva não vale
+    mais (a Riot responde 400). Um pedido de teste evita perder a coleta."""
+    try:
+        await riot.top_masteries(platform, players[0].puuid, count=1)
+    except NotFoundError:
+        return True
+    except BadRequestError:
+        logger.warning("%s: PUUIDs salvos são de outra chave; refazendo a lista", platform)
+        return False
+    return True
+
+
 async def _discover(
     riot: ScienceRiot, store: ScienceStore, platform: str, now: datetime, stop: Callable[[], bool],
 ) -> list[Monochamp]:
     updated, players = await store.get_monochamps(platform)
-    if updated is not None and now - updated < MONOCHAMPS_MAX_AGE and players:
+    if updated is not None and now - updated < MONOCHAMPS_MAX_AGE and players and await _ids_valid(riot, platform, players):
         return players
     found: list[Monochamp] = []
     complete = True
@@ -144,7 +157,7 @@ async def _harvest(
             return
         try:
             ids = await riot.ranked_match_ids(region, mono.puuid, start_time, MATCHES_PER_PLAYER)
-        except NotFoundError:
+        except (NotFoundError, BadRequestError):
             continue
         for match_id in ids:
             if stop():

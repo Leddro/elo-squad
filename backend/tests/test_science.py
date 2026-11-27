@@ -252,6 +252,8 @@ def riot_transport(key_ok: bool = True) -> httpx.MockTransport:
 
     def handler(request: httpx.Request) -> httpx.Response:
         path = request.url.path
+        if "/velho/" in path:  # PUUID gerado por outra chave
+            return httpx.Response(400)
         if not key_ok and "champion-mastery" in path:
             return httpx.Response(401)
         if "challengerleagues" in path:
@@ -316,6 +318,16 @@ def test_coleta_encontra_o_monochamp_grava_e_publica() -> None:
     assert build["boots"]["name"] == "Sapatos do Feiticeiro"
     assert build["skills"] == SKILLS and build["maxOrder"] == "Q > E > W"
     assert build["championIconUrl"].endswith("/img/champion/Malphite.png")
+
+
+def test_troca_de_chave_refaz_a_lista_de_monochamps() -> None:
+    store = InMemoryScienceStore()
+    store.monochamps["br1"] = (NOW, [Monochamp("velho", MALPHITE)])  # lista nova, mas de outra chave
+
+    report = collect(store)
+
+    assert store.monochamps["br1"][1] == [Monochamp("mono", MALPHITE)]
+    assert report.samples == 5
 
 
 def test_chave_recusada_para_mas_publica_o_que_tem() -> None:

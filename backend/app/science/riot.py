@@ -34,6 +34,10 @@ class KeyRejectedError(UpstreamError):
     """401/403: a chave venceu (dev key dura 24 h). Não adianta continuar."""
 
 
+class BadRequestError(UpstreamError):
+    """400: na prática, um PUUID gerado por outra chave (não dá para decifrar)."""
+
+
 class RateLimiter:
     def __init__(
         self,
@@ -129,6 +133,8 @@ class ScienceRiot:
                 raise KeyRejectedError(f"Riot respondeu {status}: chave inválida ou expirada")
             if status == 404:
                 raise NotFoundError(path)
+            if status == 400:
+                raise BadRequestError(f"Riot respondeu 400 em {path}")
             if status >= 500:
                 await self._sleep(2)
                 continue
