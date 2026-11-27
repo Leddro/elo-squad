@@ -113,7 +113,7 @@ void main() {
   testWidgets('erro: mensagem curta', (tester) async {
     await openSciences(
       tester,
-      FakeScienceRepository(error: const NetworkFailure()),
+      FakeScienceRepository(error: const NoConnectionFailure()),
     );
     expect(find.text('Sem conexão. Verifique sua internet.'), findsOneWidget);
   });

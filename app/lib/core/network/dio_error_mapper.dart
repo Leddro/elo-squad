@@ -2,6 +2,10 @@ import 'package:dio/dio.dart';
 
 import '../error/failure.dart';
 
+/// Marca, nas `extra` da requisição, que o aparelho estava sem rede quando
+/// ela falhou (posta pelo ConnectivityInterceptor).
+const offlineKey = 'offline';
+
 /// Tratamento de erros CENTRALIZADO: traduz qualquer erro do Dio para a
 /// [Failure] certa. Todo repositório do app usa esta mesma função.
 ///
@@ -16,7 +20,10 @@ Failure failureFromDioException(DioException e) {
     DioExceptionType.sendTimeout ||
     DioExceptionType.receiveTimeout ||
     DioExceptionType.transformTimeout || // demorou para decodificar a resposta
-    DioExceptionType.connectionError => const NetworkFailure(),
+    DioExceptionType.connectionError =>
+      e.requestOptions.extra[offlineKey] == true
+          ? const NoConnectionFailure()
+          : const ServerUnreachableFailure(),
 
     // O proxy respondeu com status de erro (4xx/5xx).
     DioExceptionType.badResponse => _fromResponse(e.response),

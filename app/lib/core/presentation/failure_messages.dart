@@ -7,7 +7,9 @@ String shortFailureMessage(Object error) {
   final failure = error is Failure ? error : UnexpectedFailure(error);
   // Exaustivo e sem curinga, como na FailureView.
   return switch (failure) {
-    NetworkFailure() => 'Sem conexão. Verifique sua internet.',
+    NoConnectionFailure() => 'Sem conexão. Verifique sua internet.',
+    ServerUnreachableFailure() =>
+      'O servidor não respondeu. Tente de novo em instantes.',
     RateLimitedFailure(:final retryAfter) =>
       'Muitas requisições. Aguarde ${retryAfter.inSeconds}s.',
     UpstreamUnavailableFailure() => 'Os servidores da Riot não responderam.',

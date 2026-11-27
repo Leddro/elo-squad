@@ -37,10 +37,16 @@ class FailureView extends StatelessWidget {
         message: 'Confira o nome e a tag. Exemplo: Fulano#BR1',
         canRetry: false, // tentar de novo não muda o resultado
       ),
-      NetworkFailure() => (
+      NoConnectionFailure() => (
         illustration: const _IconIllustration(Icons.wifi_off),
         title: 'Sem conexão',
         message: 'Verifique sua internet e tente de novo.',
+        canRetry: true,
+      ),
+      ServerUnreachableFailure() => (
+        illustration: const _IconIllustration(Icons.dns_outlined),
+        title: 'O servidor não respondeu',
+        message: 'Ele pode estar acordando. Tente de novo em instantes.',
         canRetry: true,
       ),
       RateLimitedFailure(:final retryAfter) => (

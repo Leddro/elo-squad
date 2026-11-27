@@ -76,7 +76,7 @@ void main() {
 
   testWidgets('login sem internet: avisa e continua no login', (tester) async {
     final auth = FakeAuthRepository()
-      ..onSignIn = () async => throw const NetworkFailure();
+      ..onSignIn = () async => throw const NoConnectionFailure();
     await pumpApp(tester, auth: auth);
 
     await tester.tap(find.text('Entrar com Google'));

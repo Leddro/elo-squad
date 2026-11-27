@@ -78,7 +78,7 @@ final class FirebaseAuthRepository implements AuthRepository {
   }
 
   static Failure _toFailure(FirebaseAuthException e) => switch (e.code) {
-    'network-request-failed' => const NetworkFailure(),
+    'network-request-failed' => const NoConnectionFailure(),
     // Com a proteção de enumeração de e-mails (padrão em projetos novos),
     // o Firebase responde invalid-credential; os outros dois são da versão antiga.
     'invalid-credential' ||

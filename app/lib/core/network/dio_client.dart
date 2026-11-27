@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
 import 'auth_interceptor.dart';
+import 'connectivity_interceptor.dart';
 
 /// Cria o Dio usado por todo o app: UMA configuração, em UM lugar.
 ///
@@ -10,7 +11,11 @@ import 'auth_interceptor.dart';
 ///   onResponse → ao receber       (ex.: medir tempo de resposta)
 ///   onError    → quando falha     (ex.: registrar o erro)
 /// Eles são executados em fila, na ordem em que foram adicionados.
-Dio createDio({required String baseUrl, Future<String?> Function()? idToken}) {
+Dio createDio({
+  required String baseUrl,
+  Future<String?> Function()? idToken,
+  Future<bool> Function()? isOffline,
+}) {
   final dio = Dio(
     BaseOptions(
       baseUrl: baseUrl,
@@ -26,6 +31,9 @@ Dio createDio({required String baseUrl, Future<String?> Function()? idToken}) {
   );
 
   if (idToken != null) dio.interceptors.add(AuthInterceptor(idToken));
+  if (isOffline != null) {
+    dio.interceptors.add(ConnectivityInterceptor(isOffline));
+  }
 
   // kDebugMode: true só em `flutter run` (debug). Em release, nada é logado.
   if (kDebugMode) {

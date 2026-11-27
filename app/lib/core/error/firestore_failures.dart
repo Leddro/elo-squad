@@ -19,7 +19,7 @@ StreamTransformer<T, T> firestoreFailures<T>({
         return;
       }
       if (error.code == 'unavailable') {
-        sink.addError(const NetworkFailure(), stackTrace);
+        sink.addError(const NoConnectionFailure(), stackTrace);
         return;
       }
     }

@@ -21,14 +21,21 @@ final class NotFoundFailure extends Failure {
   const NotFoundFailure();
 }
 
-/// Sem internet, proxy fora do ar ou timeout: o celular não obteve resposta.
-///
-/// TODO(quando o proxy for publicado): separar em `NoConnectionFailure`
-/// (aparelho offline: "verifique sua conexão") e `ServerUnreachableFailure`
-/// (aparelho online, mas o proxy não respondeu: problema nosso). Na camada
-/// data, usar `connectivity_plus` para distinguir os dois casos.
-final class NetworkFailure extends Failure {
+/// O celular não obteve resposta. `sealed`: um `switch` pode tratar os dois
+/// casos juntos (`NetworkFailure()`) ou separados.
+sealed class NetworkFailure extends Failure {
   const NetworkFailure();
+}
+
+/// Aparelho sem rede (Wi-Fi e dados desligados): "verifique sua conexão".
+final class NoConnectionFailure extends NetworkFailure {
+  const NoConnectionFailure();
+}
+
+/// Aparelho com rede, mas o proxy não respondeu (fora do ar, acordando ou
+/// lento demais): o problema é do nosso lado.
+final class ServerUnreachableFailure extends NetworkFailure {
+  const ServerUnreachableFailure();
 }
 
 /// Muitas buscas em pouco tempo. [retryAfter] diz quanto esperar.

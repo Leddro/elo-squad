@@ -1,3 +1,4 @@
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -12,6 +13,9 @@ final dioProvider = Provider<Dio>((ref) {
     // read (e não watch): o token é pedido a cada requisição; o Dio não
     // precisa ser recriado quando o usuário muda.
     idToken: () => ref.read(authRepositoryProvider).idToken(),
+    isOffline: () async => (await Connectivity().checkConnectivity()).every(
+      (r) => r == ConnectivityResult.none,
+    ),
   );
   // onDispose: limpeza quando o provider é descartado (fecha as conexões abertas).
   ref.onDispose(dio.close);

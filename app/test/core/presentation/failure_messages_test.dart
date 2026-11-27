@@ -4,7 +4,14 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   test('shortFailureMessage: uma mensagem por Failure', () {
-    expect(shortFailureMessage(const NetworkFailure()), contains('conexão'));
+    expect(
+      shortFailureMessage(const NoConnectionFailure()),
+      contains('conexão'),
+    );
+    expect(
+      shortFailureMessage(const ServerUnreachableFailure()),
+      contains('servidor'),
+    );
     expect(
       shortFailureMessage(
         const RateLimitedFailure(retryAfter: Duration(seconds: 7)),

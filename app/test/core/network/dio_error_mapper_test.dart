@@ -39,6 +39,22 @@ void main() {
     }
   });
 
+  test('com rede: o servidor não respondeu', () {
+    expect(
+      failureFromDioException(_error(DioExceptionType.connectionError)),
+      isA<ServerUnreachableFailure>(),
+    );
+  });
+
+  test('aparelho sem rede (anotado pelo interceptor): sem conexão', () {
+    final request = RequestOptions(path: '/x', extra: {offlineKey: true});
+    final error = DioException(
+      requestOptions: request,
+      type: DioExceptionType.connectionTimeout,
+    );
+    expect(failureFromDioException(error), isA<NoConnectionFailure>());
+  });
+
   group('outros tipos viram UnexpectedFailure', () {
     const tipos = [
       DioExceptionType.badCertificate,

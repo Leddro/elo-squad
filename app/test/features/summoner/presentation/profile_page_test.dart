@@ -102,7 +102,7 @@ void main() {
     answer(
       () async => ProfileResult(
         profile: makeProfile(),
-        staleBecause: const NetworkFailure(),
+        staleBecause: const NoConnectionFailure(),
       ),
     );
 
@@ -132,7 +132,7 @@ void main() {
   testWidgets('erro NÃO é refeito sozinho (retry automático desligado)', (
     tester,
   ) async {
-    answer(() async => throw const NetworkFailure());
+    answer(() async => throw const NoConnectionFailure());
 
     await pumpProfilePage(tester);
     await tester.pump();
@@ -145,7 +145,7 @@ void main() {
   testWidgets('"tentar de novo" busca outra vez e mostra o perfil', (
     tester,
   ) async {
-    answer(() async => throw const NetworkFailure());
+    answer(() async => throw const NoConnectionFailure());
     await pumpProfilePage(tester);
     await tester.pump();
     expect(find.text('Sem conexão'), findsOneWidget);

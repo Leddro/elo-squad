@@ -84,7 +84,7 @@ void main() {
     tester,
   ) async {
     repository = FakeMatchRepository()
-      ..onRefresh = () async => throw const NetworkFailure();
+      ..onRefresh = () async => throw const NoConnectionFailure();
 
     await pumpSection(tester);
     expect(find.text('Sem conexão. Verifique sua internet.'), findsOneWidget);
@@ -99,7 +99,7 @@ void main() {
     tester,
   ) async {
     repository = FakeMatchRepository(saved(pageOf([2, 1])))
-      ..onRefresh = () async => throw const NetworkFailure();
+      ..onRefresh = () async => throw const NoConnectionFailure();
 
     await pumpSection(tester);
 
