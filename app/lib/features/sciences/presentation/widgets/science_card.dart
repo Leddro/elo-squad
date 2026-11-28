@@ -1,4 +1,5 @@
 import 'package:material_ui/material_ui.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/presentation/widgets/network_avatar.dart';
 import '../../domain/entities/science.dart';
@@ -51,6 +52,19 @@ class ScienceCard extends StatelessWidget {
                 TierBadge(tier: science.tier),
               ],
             ),
+            if (science.source case final source?) ...[
+              const SizedBox(height: 8),
+              ActionChip(
+                avatar: const Icon(Icons.play_circle_outline, size: 18),
+                label: Text('Vídeo do $source'),
+                onPressed: science.videoUrl == null
+                    ? null
+                    : () => launchUrl(
+                        Uri.parse(science.videoUrl!),
+                        mode: LaunchMode.externalApplication,
+                      ),
+              ),
+            ],
             const SizedBox(height: 10),
             _Rates(science: science),
             const SizedBox(height: 12),
@@ -99,9 +113,21 @@ class _Rates extends StatelessWidget {
     return Row(
       children: [
         stat(
-          'Win rate',
-          _percent(science.winRate),
-          hint: '${science.games} partidas com esta build',
+          switch (science.winRateBasis) {
+            WinRateBasis.champion => 'Win rate*',
+            _ => 'Win rate',
+          },
+          science.winRateBasis == WinRateBasis.none
+              ? '—'
+              : _percent(science.winRate),
+          hint: switch (science.winRateBasis) {
+            WinRateBasis.build => '${science.games} partidas com esta build',
+            WinRateBasis.champion =>
+              '*Do campeão (${science.games} partidas): a build ainda tem '
+                  'poucas',
+            WinRateBasis.video => 'Taxa informada no vídeo',
+            WinRateBasis.none => 'Sem partidas com esta build ainda',
+          },
         ),
         stat('Pick rate', _percent(science.pickRate)),
         stat('Ban rate', _percent(science.banRate)),

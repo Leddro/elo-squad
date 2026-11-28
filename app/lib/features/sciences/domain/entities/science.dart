@@ -28,6 +28,10 @@ abstract class ScienceBuild with _$ScienceBuild {
     @Default(0) double winRate, // 0 a 1, da build
     @Default(0) double pickRate, // 0 a 1, do campeão nesta rota no elo alto
     @Default(0) double banRate, // 0 a 1, do campeão no elo alto
+    /// Quem criou (Ciência tirada de vídeo); null = a coleta automática.
+    String? source,
+    String? videoUrl,
+    @Default(WinRateBasis.build) WinRateBasis winRateBasis,
   }) = _ScienceBuild;
 }
 
@@ -83,4 +87,22 @@ enum ScienceRole {
     'UTILITY' => utility,
     _ => null,
   };
+}
+
+/// De onde vem a taxa de vitória mostrada.
+enum WinRateBasis {
+  /// Partidas com esta build.
+  build,
+
+  /// Partidas do campeão (a build ainda tem poucas).
+  champion,
+
+  /// O que o vídeo informa.
+  video,
+
+  /// Sem dados ainda.
+  none;
+
+  static WinRateBasis fromWire(String? value) =>
+      values.where((b) => b.name == value).firstOrNull ?? build;
 }

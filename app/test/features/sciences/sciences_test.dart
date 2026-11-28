@@ -105,6 +105,28 @@ void main() {
     expect(jinx, lessThan(malphite));
   });
 
+  testWidgets('Ciência de vídeo: selo do criador e taxa do campeão', (
+    tester,
+  ) async {
+    final video = science('Renekton Godzilla', 'Renekton', ScienceRole.top)
+        .copyWith(
+          source: 'Mylon',
+          videoUrl: 'https://www.youtube.com/watch?v=rAOmPUoLzto',
+          winRateBasis: WinRateBasis.champion,
+          winRate: 0.52,
+        );
+    final board = SciencesBoard(
+      patch: '16.23',
+      updatedAt: DateTime.now(),
+      builds: [video],
+    );
+    await openSciences(tester, FakeScienceRepository(board: board));
+
+    expect(find.text('Vídeo do Mylon'), findsOneWidget);
+    expect(find.text('Win rate*'), findsOneWidget);
+    expect(find.text('52,0%'), findsOneWidget);
+  });
+
   testWidgets('sem nada publicado: explica', (tester) async {
     await openSciences(tester, FakeScienceRepository());
     expect(find.text('Nenhuma ciência ainda'), findsOneWidget);

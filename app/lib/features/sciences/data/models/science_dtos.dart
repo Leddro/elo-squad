@@ -50,6 +50,9 @@ abstract class ScienceBuildDto with _$ScienceBuildDto {
     @Default(0) double winRate,
     @Default(0) double pickRate,
     @Default(0) double banRate,
+    String? source,
+    String? videoUrl,
+    String? winRateBasis,
   }) = _ScienceBuildDto;
 
   factory ScienceBuildDto.fromJson(Json json) =>
@@ -72,6 +75,9 @@ abstract class ScienceBuildDto with _$ScienceBuildDto {
       winRate: winRate,
       pickRate: pickRate,
       banRate: banRate,
+      source: source,
+      videoUrl: videoUrl,
+      winRateBasis: WinRateBasis.fromWire(winRateBasis),
     );
   }
 }
