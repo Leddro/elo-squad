@@ -220,7 +220,10 @@ class FirestoreStore:
         return WeeklyRanking.model_validate(snap.to_dict()) if snap.exists else None
 
     async def save_ranking(self, squad_id: str, ranking: WeeklyRanking) -> None:
-        await self._squad(squad_id).collection(RANKINGS).document(ranking.period_id).set(_dump(ranking))
+        # weekId/weekStart: o APK antigo ainda lê o ranking por esses campos.
+        await self._squad(squad_id).collection(RANKINGS).document(ranking.period_id).set(
+            {**_dump(ranking), "weekId": ranking.period_id, "weekStart": ranking.starts_at},
+        )
 
     async def delete_ranking(self, squad_id: str, period_id: str) -> None:
         await self._squad(squad_id).collection(RANKINGS).document(period_id).delete()
