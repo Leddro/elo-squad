@@ -1,4 +1,4 @@
-import 'package:elo_squad/features/squads/domain/entities/weekly_ranking.dart';
+import 'package:elo_squad/features/squads/domain/entities/squad_ranking.dart';
 import 'package:elo_squad/core/error/failure.dart';
 import 'package:elo_squad/features/squads/presentation/pages/link_riot_id_page.dart';
 import 'package:elo_squad/features/squads/presentation/pages/squad_detail_page.dart';
@@ -161,9 +161,10 @@ void main() {
       account: linkedAccount,
       squads: [makeSquad()],
     );
-    squads.rankings['squad-1'] = WeeklyRanking(
-      weekId: '2026-W48',
-      weekStart: DateTime.utc(2026, 11, 23),
+    squads.rankings['squad-1'] = SquadRanking(
+      periodId: '2026-W48',
+      startsAt: DateTime.utc(2026, 11, 23),
+      endsAt: DateTime.utc(2026, 11, 30),
       updatedAt: DateTime.now(),
       isFinal: false,
       entries: [
@@ -179,6 +180,7 @@ void main() {
             current: null,
             lpDelta: lp,
             games: 3,
+            points: lp,
           ),
       ],
     );
@@ -191,8 +193,8 @@ void main() {
     final first = tester.getTopLeft(find.text('Ciclano#BR1'));
     final second = tester.getTopLeft(find.text('Fulano#BR1'));
     expect(first.dy, lessThan(second.dy));
-    expect(find.text('+40 PDL'), findsOneWidget);
-    expect(find.text('-10 PDL'), findsOneWidget);
+    expect(find.text('+40 pts'), findsOneWidget);
+    expect(find.text('-10 pts'), findsOneWidget);
   });
 
   Future<void> openSettings(

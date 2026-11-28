@@ -35,16 +35,16 @@ final class SquadFirestoreDataSource {
         return data == null ? null : SquadDocDto.fromJson(data);
       });
 
-  Stream<WeeklyRankingDto?> watchLatestRanking(String squadId) => _db
+  Stream<SquadRankingDto?> watchLatestRanking(String squadId) => _db
       .collection('squads')
       .doc(squadId)
       .collection('rankings')
-      .orderBy('weekStart', descending: true)
+      .orderBy('startsAt', descending: true)
       .limit(1)
       .snapshots()
       .map(
         (query) => query.docs.isEmpty
             ? null
-            : WeeklyRankingDto.fromJson(query.docs.first.data()),
+            : SquadRankingDto.fromJson(query.docs.first.data()),
       );
 }

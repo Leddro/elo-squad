@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:elo_squad/features/squads/domain/entities/squad.dart';
-import 'package:elo_squad/features/squads/domain/entities/weekly_ranking.dart';
+import 'package:elo_squad/features/squads/domain/entities/squad_ranking.dart';
 import 'package:elo_squad/features/squads/domain/repositories/squad_repository.dart';
 import 'package:elo_squad/features/summoner/domain/entities/riot_id.dart';
 
@@ -24,7 +24,7 @@ class FakeSquadRepository implements SquadRepository {
   final leftSquads = <String>[];
 
   /// Ranking mais recente de cada squad (por id).
-  final rankings = <String, WeeklyRanking>{};
+  final rankings = <String, SquadRanking>{};
 
   void setAccount(AccountLink account) {
     _account = account;
@@ -57,7 +57,7 @@ class FakeSquadRepository implements SquadRepository {
   }
 
   @override
-  Stream<WeeklyRanking?> watchLatestRanking(String squadId) =>
+  Stream<SquadRanking?> watchLatestRanking(String squadId) =>
       Stream.value(rankings[squadId]);
 
   @override
@@ -90,6 +90,18 @@ class FakeSquadRepository implements SquadRepository {
   @override
   Future<void> setSquadIcon(String squadId, String icon) async =>
       iconChanges.add((squadId, icon));
+
+  /// Períodos pedidos: (squadId, duração, começo, fim, repetir).
+  final periodChanges = <(String, PeriodLength, DateTime?, DateTime?, bool)>[];
+
+  @override
+  Future<void> setPeriod(
+    String squadId, {
+    required PeriodLength length,
+    DateTime? startsAt,
+    DateTime? endsAt,
+    required bool repeat,
+  }) async => periodChanges.add((squadId, length, startsAt, endsAt, repeat));
 }
 
 const linkedAccount = AccountLink(

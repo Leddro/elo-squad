@@ -4,7 +4,7 @@ import '../../../../core/error/firestore_failures.dart';
 import '../../../../core/error/guard_failures.dart';
 import '../../../summoner/domain/entities/riot_id.dart';
 import '../../domain/entities/squad.dart';
-import '../../domain/entities/weekly_ranking.dart';
+import '../../domain/entities/squad_ranking.dart';
 import '../../domain/repositories/squad_repository.dart';
 import '../datasources/squad_firestore_data_source.dart';
 import '../datasources/squad_remote_data_source.dart';
@@ -38,7 +38,7 @@ final class SquadRepositoryImpl implements SquadRepository {
       .transform(firestoreFailures(permissionDeniedAsNull: true));
 
   @override
-  Stream<WeeklyRanking?> watchLatestRanking(String squadId) => _firestore
+  Stream<SquadRanking?> watchLatestRanking(String squadId) => _firestore
       .watchLatestRanking(squadId)
       .map((dto) => dto?.toEntity())
       .transform(firestoreFailures(permissionDeniedAsNull: true));
@@ -76,4 +76,21 @@ final class SquadRepositoryImpl implements SquadRepository {
   @override
   Future<void> removeMember(String squadId, String memberUid) =>
       guardFailures(() => _remote.removeMember(squadId, memberUid));
+
+  @override
+  Future<void> setPeriod(
+    String squadId, {
+    required PeriodLength length,
+    DateTime? startsAt,
+    DateTime? endsAt,
+    required bool repeat,
+  }) => guardFailures(
+    () => _remote.setPeriod(
+      squadId,
+      length: length.wire,
+      startsAt: startsAt,
+      endsAt: endsAt,
+      repeat: repeat,
+    ),
+  );
 }

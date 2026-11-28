@@ -10,7 +10,7 @@ import '../../../../core/presentation/widgets/network_avatar.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../summoner/domain/entities/ranked.dart';
 import '../../../summoner/presentation/formatters.dart';
-import '../../domain/entities/weekly_ranking.dart';
+import '../../domain/entities/squad_ranking.dart';
 import '../widgets/squad_icon.dart';
 import '../../data/squad_data_providers.dart';
 import '../../domain/entities/squad.dart';
@@ -357,14 +357,14 @@ class _SquadMembers extends ConsumerWidget {
 
   /// Quem está na frente no ranking vem primeiro. Sem ranking ainda, a
   /// ordem de entrada no squad.
-  List<_Row> _rows(WeeklyRanking? ranking) {
+  List<_Row> _rows(SquadRanking? ranking) {
     final byUid = {for (final m in squad.members) m.uid: m};
     if (ranking == null) {
       return [for (final m in squad.members) _Row(m)];
     }
     final ranked = [
       for (final e in ranking.entries)
-        if (byUid.containsKey(e.uid)) _Row(byUid[e.uid]!, e.current, e.lpDelta),
+        if (byUid.containsKey(e.uid)) _Row(byUid[e.uid]!, e.current, e.points),
     ];
     final seen = {for (final r in ranked) r.member.uid};
     return [
@@ -375,7 +375,7 @@ class _SquadMembers extends ConsumerWidget {
   }
 }
 
-/// Uma linha da cascata: o membro e, se houver ranking, o elo e o PDL.
+/// Uma linha da cascata: o membro e, se houver ranking, o elo e os pontos.
 class _Row {
   const _Row(this.member, [this.current, this.lpDelta]);
 
@@ -437,7 +437,7 @@ class _MemberRow extends StatelessWidget {
             ),
             if (delta != null)
               Text(
-                '${delta > 0 ? '+' : ''}$delta PDL',
+                '${delta > 0 ? '+' : ''}$delta pts',
                 style: text.labelLarge?.copyWith(
                   color: delta > 0
                       ? BrandColors.cyan

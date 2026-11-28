@@ -97,8 +97,9 @@ void main() {
     test('ranking mais recente: Timestamp e o campo `final`', () async {
       final rankings = db.collection('squads').doc('s1').collection('rankings');
       Map<String, dynamic> doc(String week, DateTime start, bool isFinal) => {
-        'weekId': week,
-        'weekStart': start, // o fake guarda como Timestamp, igual ao real
+        'periodId': week,
+        'startsAt': start, // o fake guarda como Timestamp, igual ao real
+        'endsAt': start.add(const Duration(days: 7)),
         'updatedAt': start.add(const Duration(days: 1)),
         'final': isFinal,
         'entries': [
@@ -116,6 +117,18 @@ void main() {
             },
             'lpDelta': 56,
             'games': 3,
+            'bonus': 20,
+            'points': 76,
+            'scienceWins': [
+              {
+                'matchId': 'BR1_1',
+                'playedAt': start.add(const Duration(hours: 5)),
+                'championName': 'Malphite',
+                'title': 'Malphite AP no Mid',
+                'tier': 'D',
+                'bonus': 20,
+              },
+            ],
           },
         ],
       };
@@ -128,10 +141,13 @@ void main() {
 
       final ranking = (await repository.watchLatestRanking('s1').first)!;
 
-      expect(ranking.weekId, '2026-W48'); // a semana mais nova
+      expect(ranking.periodId, '2026-W48'); // o período mais novo
       expect(ranking.isFinal, isFalse);
-      expect(ranking.weekStart, DateTime.utc(2026, 11, 23, 3));
+      expect(ranking.startsAt, DateTime.utc(2026, 11, 23, 3));
+      expect(ranking.endsAt, DateTime.utc(2026, 11, 30, 3));
       expect(ranking.entries.single.lpDelta, 56);
+      expect(ranking.entries.single.points, 76);
+      expect(ranking.entries.single.scienceWins.single.tier, 'D');
       expect(ranking.entries.single.current!.lp, 10);
     });
 

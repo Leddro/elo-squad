@@ -6,6 +6,7 @@ import '../../../../core/presentation/run_action.dart';
 import '../../../summoner/domain/entities/riot_id.dart';
 import '../../data/squad_data_providers.dart';
 import '../providers/squad_providers.dart';
+import '../widgets/ranking_section.dart' show dayMonth;
 
 /// Vincula o Riot ID do usuário à conta (o proxy confere se existe na Riot).
 class LinkRiotIdPage extends ConsumerStatefulWidget {
@@ -49,7 +50,9 @@ class _LinkRiotIdPageState extends ConsumerState<LinkRiotIdPage> {
 
   @override
   Widget build(BuildContext context) {
-    final current = ref.watch(accountProvider).value?.riotId;
+    final account = ref.watch(accountProvider).value;
+    final current = account?.riotId;
+    final trophies = account?.trophies ?? const [];
     return Scaffold(
       appBar: AppBar(
         title: Text(current == null ? 'Vincular Riot ID' : 'Minha conta'),
@@ -90,6 +93,34 @@ class _LinkRiotIdPageState extends ConsumerState<LinkRiotIdPage> {
             ),
             const SizedBox(height: 16),
             FilledButton(onPressed: _submit, child: const Text('Vincular')),
+            if (trophies.isNotEmpty) ...[
+              const SizedBox(height: 24),
+              Text(
+                'Troféus (${trophies.length})',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 8),
+              Expanded(
+                child: Card(
+                  child: ListView(
+                    children: [
+                      for (final trophy in trophies)
+                        ListTile(
+                          leading: Text(
+                            const ['🥇', '🥈', '🥉'][trophy.place - 1],
+                            style: const TextStyle(fontSize: 24),
+                          ),
+                          title: Text(trophy.squadName),
+                          subtitle: Text(
+                            '${trophy.place}º lugar · ${trophy.points} pts · '
+                            'até ${dayMonth(trophy.endsAt.subtract(const Duration(minutes: 1)))}',
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),

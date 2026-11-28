@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../auth/data/auth_providers.dart';
 import '../../data/squad_data_providers.dart';
 import '../../domain/entities/squad.dart';
-import '../../domain/entities/weekly_ranking.dart';
+import '../../domain/entities/squad_ranking.dart';
 
 /// uid de quem está logado (o roteador garante que estas telas só abrem logado).
 final currentUidProvider = Provider<String?>(
@@ -32,7 +32,7 @@ final squadProvider = StreamProvider.autoDispose.family<Squad?, String>(
 
 /// O ranking mais recente de um squad, em tempo real.
 final latestRankingProvider = StreamProvider.autoDispose
-    .family<WeeklyRanking?, String>(
+    .family<SquadRanking?, String>(
       (ref, squadId) =>
           ref.watch(squadRepositoryProvider).watchLatestRanking(squadId),
       retry: (_, _) => null,

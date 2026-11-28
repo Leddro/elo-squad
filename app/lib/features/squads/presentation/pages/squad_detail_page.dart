@@ -11,6 +11,7 @@ import '../../../../core/router/app_router.dart';
 import '../../data/squad_data_providers.dart';
 import '../../domain/entities/squad.dart';
 import '../providers/squad_providers.dart';
+import '../widgets/period_dialog.dart';
 import '../widgets/ranking_section.dart';
 import '../widgets/squad_icon.dart';
 
@@ -79,6 +80,15 @@ class SquadDetailPage extends ConsumerWidget {
             ),
             if (uid != null && squad.isOwner(uid))
               ListTile(
+                leading: const Icon(Icons.emoji_events_outlined),
+                title: const Text('Período de disputa'),
+                subtitle: const Text(
+                  'Semana, 2 semanas, mês ou datas próprias',
+                ),
+                onTap: () => Navigator.pop(sheetContext, 'period'),
+              ),
+            if (uid != null && squad.isOwner(uid))
+              ListTile(
                 leading: const Icon(Icons.edit_outlined),
                 title: const Text('Nome e descrição'),
                 onTap: () => Navigator.pop(sheetContext, 'info'),
@@ -118,6 +128,21 @@ class SquadDetailPage extends ConsumerWidget {
           () => ref
               .read(squadRepositoryProvider)
               .updateSquadInfo(squad.id, name: info.$1, description: info.$2),
+        );
+      case 'period':
+        final choice = await pickPeriod(context, squad.period);
+        if (choice == null || !context.mounted) return;
+        await runAction(
+          context,
+          () => ref
+              .read(squadRepositoryProvider)
+              .setPeriod(
+                squad.id,
+                length: choice.length,
+                startsAt: choice.startsAt,
+                endsAt: choice.endsAt,
+                repeat: choice.repeat,
+              ),
         );
       case 'remove':
         await _remove(context, ref, squad, uid!);
@@ -236,8 +261,12 @@ class _SquadView extends StatelessWidget {
           ),
           const SizedBox(height: 24),
         ],
-        RankingSection(squadId: squad.id, uid: uid),
+        RankingSection(squad: squad, uid: uid),
         const SizedBox(height: 24),
+        if (squad.podiums.isNotEmpty) ...[
+          PodiumHistory(squad: squad),
+          const SizedBox(height: 24),
+        ],
         _InviteCard(code: squad.inviteCode),
         const SizedBox(height: 24),
         Text('Membros (${squad.members.length})', style: text.titleMedium),
@@ -252,6 +281,9 @@ class _SquadView extends StatelessWidget {
                   subtitle: Text(
                     [
                       ?member.displayName,
+                      if (medalsLabel(squad, member.uid) case final m
+                          when m.isNotEmpty)
+                        m,
                       if (squad.isOwner(member.uid)) 'líder',
                       if (member.uid == uid) 'você',
                     ].join(' · '),

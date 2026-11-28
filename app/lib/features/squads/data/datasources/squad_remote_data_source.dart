@@ -53,4 +53,20 @@ final class SquadRemoteDataSource {
         '/squads/${Uri.encodeComponent(squadId)}/members/'
         '${Uri.encodeComponent(memberUid)}',
       );
+
+  Future<void> setPeriod(
+    String squadId, {
+    required String length,
+    DateTime? startsAt,
+    DateTime? endsAt,
+    required bool repeat,
+  }) => _dio.put<void>(
+    '/squads/${Uri.encodeComponent(squadId)}/period',
+    data: {
+      'length': length,
+      'startsAt': ?startsAt?.toUtc().toIso8601String(),
+      'endsAt': ?endsAt?.toUtc().toIso8601String(),
+      'repeat': repeat,
+    },
+  );
 }
