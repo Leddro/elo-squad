@@ -6,7 +6,7 @@ Tudo aqui é nosso, não da Riot. A tradução Riot → contrato fica em mappers
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 from pydantic.alias_generators import to_camel
 
 
@@ -153,6 +153,8 @@ class Squad(CamelModel):
     created_at: datetime
     icon: str | None = None  # chave de SQUAD_ICONS; None = inicial do nome
     description: str | None = None  # só aparece ao abrir o squad
+    period: "SquadPeriod | None" = None  # None = semana de segunda a segunda
+    podiums: list["Podium"] = Field(default_factory=list)  # do mais recente ao mais antigo
 
 
 class UserRecord(CamelModel):
@@ -163,6 +165,7 @@ class UserRecord(CamelModel):
     profile_icon_url: str | None = None
     squad_ids: list[str] = Field(default_factory=list)
     fcm_tokens: list[str] = Field(default_factory=list)
+    trophies: list["Trophy"] = Field(default_factory=list)
 
 
 class LinkRiotIdRequest(CamelModel):
@@ -219,20 +222,86 @@ class RankSnapshot(CamelModel):
     taken_at: datetime
 
 
+PeriodLength = Literal["week", "two_weeks", "month", "custom"]
+
+
+class SquadPeriod(CamelModel):
+    """O período de disputa do squad, definido pelo líder."""
+    length: PeriodLength
+    starts_at: datetime
+    ends_at: datetime
+    repeat: bool  # ao acabar, começa outro igual
+
+
+class SquadPeriodRequest(CamelModel):
+    length: PeriodLength
+    starts_at: datetime | None = None  # só no "custom"
+    ends_at: datetime | None = None    # só no "custom"
+    repeat: bool = True
+
+
+class ScienceWin(CamelModel):
+    """Vitória com uma Ciência: vale pontos extras no ranking do squad."""
+    match_id: str
+    played_at: datetime
+    champion_name: str
+    title: str
+    tier: str  # "S" a "D"
+    bonus: int
+
+
 class RankingEntry(CamelModel):
     uid: str
     display_name: str | None
     riot_id: RiotId
     profile_icon_url: str | None
     current: RankedEntry | None  # elo agora (None = sem ranque)
-    lp_delta: int | None  # PDL ganho na semana (None = sem ranque no começo ou agora)
-    games: int  # partidas ranqueadas Solo/Duo na semana
+    lp_delta: int | None  # PDL ganho no período (None = sem ranque no começo ou agora)
+    games: int  # partidas ranqueadas Solo/Duo no período
+    bonus: int = 0  # pontos extras das Ciências
+    points: int | None = None  # lp_delta + bonus (None = sem ranque)
+    science_wins: list[ScienceWin] = Field(default_factory=list)
 
 
 class WeeklyRanking(CamelModel):
-    """Documento squads/{id}/rankings/{weekId}. Entradas do maior para o menor PDL ganho."""
-    week_id: str
-    week_start: datetime
+    """Documento squads/{id}/rankings/{periodId}. Do maior para o menor número de pontos."""
+    period_id: str
+    starts_at: datetime
+    ends_at: datetime
     updated_at: datetime
-    final: bool  # True quando a semana acabou
+    final: bool  # True quando o período acabou
     entries: list[RankingEntry]
+
+    @model_validator(mode="before")
+    @classmethod
+    def _legacy_week(cls, data: object) -> object:
+        """Documentos antigos (só semanas): weekId/weekStart."""
+        if isinstance(data, dict) and "weekId" in data and "periodId" not in data:
+            from datetime import timedelta
+
+            data = {**data, "periodId": data["weekId"], "startsAt": data["weekStart"]}
+            data.setdefault("endsAt", data["weekStart"] + timedelta(days=7))
+        return data
+
+
+class Podium(CamelModel):
+    """Resultado de um período encerrado: até 3 uids, do 1º ao 3º."""
+    period_id: str
+    starts_at: datetime
+    ends_at: datetime
+    places: list[str]
+    points: list[int]
+
+
+class Trophy(CamelModel):
+    """Troféu no perfil de quem ficou entre os 3 primeiros de um período."""
+    squad_id: str
+    squad_name: str
+    period_id: str
+    ends_at: datetime
+    place: int  # 1 ouro, 2 prata, 3 bronze
+    points: int
+
+
+Squad.model_rebuild()
+UserRecord.model_rebuild()

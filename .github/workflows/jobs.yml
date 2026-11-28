@@ -1,27 +1,57 @@
-# Tarefas agendadas do ranking: chamam o proxy publicado (Render).
-# Precisam de:  Settings → Secrets and variables → Actions
-#   Variables: PROXY_URL   (ex.: https://elo-squad-proxy.onrender.com)
-#   Secrets:   JOBS_SECRET (o mesmo valor do painel do Render)
+# Tarefas do ranking, a cada hora:
+#   1. bônus: confere as vitórias com Ciência dos membros dos squads (Riot + Firestore)
+#   2. ranking: o proxy publicado (Render) atualiza os rankings, fecha os
+#      períodos que acabaram (pódio e troféus) e começa os próximos
+# Precisa de:  Settings → Secrets and variables → Actions
+#   Variables: PROXY_URL         (ex.: https://elo-squad-proxy.onrender.com)
+#   Secrets:   JOBS_SECRET       (o mesmo valor do painel do Render)
+#              RIOT_API_KEY, FIREBASE_SA_JSON (os mesmos da coleta das Ciências)
 # Sem PROXY_URL, o workflow não faz nada.
 name: Tarefas do ranking
 
 on:
   schedule:
-    - cron: "0 * * * *" # a cada hora: atualiza o ranking da semana
-    - cron: "5 3 * * 1" # segunda 03:05 UTC = 00:05 em Brasília: fecha a semana
+    - cron: "0 * * * *"
   workflow_dispatch:
-    inputs:
-      job:
-        description: Tarefa
-        type: choice
-        options: [refresh-rankings, close-week]
-        default: refresh-rankings
 
-permissions: {}
+permissions:
+  contents: read
 
 jobs:
-  run:
+  bonus:
     if: vars.PROXY_URL != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      RIOT_API_KEY: ${{ secrets.RIOT_API_KEY }}
+      FIREBASE_SA_JSON: ${{ secrets.FIREBASE_SA_JSON }}
+    steps:
+      - name: Baixar o código
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Instalar o uv
+        uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d # v10.4.0
+        with:
+          working-directory: backend
+          enable-cache: true
+
+      - name: Instalar dependências
+        run: uv sync --locked --no-dev
+
+      - name: Conferir vitórias com Ciência
+        env:
+          FIREBASE_CREDENTIALS_FILE: ${{ runner.temp }}/firebase-sa.json
+        run: |
+          printf '%s' "$FIREBASE_SA_JSON" > "$FIREBASE_CREDENTIALS_FILE"
+          uv run python -m app.science.bonus
+
+  ranking:
+    needs: bonus
+    # Mesmo se o bônus falhar, o ranking (PDL) atualiza.
+    if: always() && vars.PROXY_URL != ''
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -29,10 +59,9 @@ jobs:
         env:
           PROXY_URL: ${{ vars.PROXY_URL }}
           JOBS_SECRET: ${{ secrets.JOBS_SECRET }}
-          JOB: ${{ inputs.job || (github.event.schedule == '5 3 * * 1' && 'close-week' || 'refresh-rankings') }}
         # --retry: o proxy dorme sem uso e leva até ~1 min para acordar.
-        # As duas rotas podem rodar de novo sem estragos.
+        # A rota pode rodar de novo sem estragos.
         run: |
           curl --fail-with-body --silent --show-error \
             --retry 4 --retry-delay 20 --retry-all-errors --max-time 180 \
-            -X POST -H "X-Jobs-Secret: $JOBS_SECRET" "$PROXY_URL/jobs/$JOB"
+            -X POST -H "X-Jobs-Secret: $JOBS_SECRET" "$PROXY_URL/jobs/refresh-rankings"

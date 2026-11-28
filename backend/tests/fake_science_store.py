@@ -16,6 +16,7 @@ class InMemoryScienceStore:
         self.champions: dict[str, ChampionStats] = {}
         self.patches: dict[str, PatchChanges] = {}
         self.published: dict[str, Any] | None = None
+        self.history: list[dict[str, Any]] = []
         self.progress: dict[str, dict[str, int]] = {}
         self.seen: dict[str, dict[str, int]] = {}
         self.totals: dict[str, int] = {}
@@ -63,4 +64,7 @@ class InMemoryScienceStore:
         self.patches[patch] = changes
 
     async def publish(self, document: dict[str, Any]) -> None:
+        from app.science.store import history_entry
+
         self.published = document
+        self.history.append(history_entry(document))

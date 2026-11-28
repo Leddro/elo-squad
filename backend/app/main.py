@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from typing import Annotated
 
 import httpx
-from fastapi import Depends, FastAPI, Header, Query, Request, Response
+from fastapi import HTTPException, Depends, FastAPI, Header, Query, Request, Response
 from fastapi.responses import JSONResponse
 
 from app.auth import CurrentUser, FirebaseTokenVerifier, get_current_user
@@ -44,6 +44,8 @@ from app.models import (
     MatchPage,
     SquadIconRequest,
     SquadInfoRequest,
+    SquadPeriod,
+    SquadPeriodRequest,
     SquadRef,
     SummonerProfile,
 )
@@ -238,6 +240,17 @@ async def set_squad_info(
 ) -> Response:
     await services.squads.set_info(user, squad_id, body.name, body.description)
     return Response(status_code=204)
+
+
+@app.put("/squads/{squad_id}/period", response_model=SquadPeriod, responses=_SQUAD_ERRORS)
+async def set_squad_period(
+    squad_id: str, body: SquadPeriodRequest, user: CurrentUser, services: ServicesDep,
+) -> SquadPeriod:
+    """Só o líder. O período em andamento acaba sem troféus e o novo começa já."""
+    try:
+        return await services.ranking.set_period(user, squad_id, body)
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e)) from e
 
 
 @app.delete("/squads/{squad_id}/members/{member_uid}", status_code=204, responses=_SQUAD_ERRORS)

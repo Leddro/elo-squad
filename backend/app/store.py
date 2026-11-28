@@ -7,11 +7,15 @@ de um documento usam operações atômicas do Firestore (batch, ArrayUnion).
 
 from typing import Any, Protocol
 
-from app.models import RankSnapshot, RiotId, Squad, SquadMember, UserRecord, WeeklyRanking
+from app.models import (
+    Podium, RankSnapshot, RiotId, ScienceWin, Squad, SquadMember, SquadPeriod, Trophy, UserRecord, WeeklyRanking,
+)
 
 USERS = "users"
 SQUADS = "squads"
 INVITE_CODES = "inviteCodes"
+SCIENCE_BONUS = "scienceBonus"  # scienceBonus/{puuid}: vitórias com Ciência (gravadas pela coleta)
+MAX_PODIUMS = 50
 WEEKS = "weeks"  # weeks/{weekId}/snapshots/{puuid}: elo no começo da semana
 RANKINGS = "rankings"  # squads/{id}/rankings/{weekId}
 
@@ -62,6 +66,16 @@ class Store(Protocol):
     async def get_ranking(self, squad_id: str, week_id: str) -> WeeklyRanking | None: ...
 
     async def save_ranking(self, squad_id: str, ranking: WeeklyRanking) -> None: ...
+
+    async def delete_ranking(self, squad_id: str, period_id: str) -> None: ...
+
+    async def save_period(self, squad_id: str, period: SquadPeriod) -> None: ...
+
+    async def add_podium(self, squad_id: str, podium: Podium, trophies: dict[str, Trophy]) -> None:
+        """Põe o pódio no squad (o mais recente primeiro) e o troféu no perfil de cada um."""
+        ...
+
+    async def get_science_wins(self, puuids: list[str]) -> dict[str, list[ScienceWin]]: ...
 
     # ----- Notificações -----
 
@@ -206,7 +220,36 @@ class FirestoreStore:
         return WeeklyRanking.model_validate(snap.to_dict()) if snap.exists else None
 
     async def save_ranking(self, squad_id: str, ranking: WeeklyRanking) -> None:
-        await self._squad(squad_id).collection(RANKINGS).document(ranking.week_id).set(_dump(ranking))
+        await self._squad(squad_id).collection(RANKINGS).document(ranking.period_id).set(_dump(ranking))
+
+    async def delete_ranking(self, squad_id: str, period_id: str) -> None:
+        await self._squad(squad_id).collection(RANKINGS).document(period_id).delete()
+
+    async def save_period(self, squad_id: str, period: SquadPeriod) -> None:
+        await self._squad(squad_id).update({"period": _dump(period)})
+
+    async def add_podium(self, squad_id: str, podium: Podium, trophies: dict[str, Trophy]) -> None:
+        from google.cloud.firestore import ArrayUnion
+
+        squad = await self.get_squad(squad_id)
+        if squad is None:
+            return
+        podiums = [podium, *(p for p in squad.podiums if p.period_id != podium.period_id)][:MAX_PODIUMS]
+        batch = self._db.batch()
+        batch.update(self._squad(squad_id), {"podiums": [_dump(p) for p in podiums]})
+        for uid, trophy in trophies.items():
+            batch.set(self._user(uid), {"trophies": ArrayUnion([_dump(trophy)])}, merge=True)
+        await batch.commit()
+
+    async def get_science_wins(self, puuids: list[str]) -> dict[str, list[ScienceWin]]:
+        refs = [self._db.collection(SCIENCE_BONUS).document(p) for p in puuids]
+        found: dict[str, list[ScienceWin]] = {}
+        async for snap in self._db.get_all(refs):
+            matches = (snap.to_dict() or {}).get("matches", {}) if snap.exists else {}
+            wins = [ScienceWin.model_validate(m) for m in matches.values() if m.get("bonus")]
+            if wins:
+                found[snap.id] = wins
+        return found
 
     # ----- Notificações -----
 

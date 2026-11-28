@@ -204,7 +204,7 @@ def test_fechar_a_semana_avisa_o_destaque_e_abre_a_semana_nova(
     assert [(e.uid, e.lp_delta) for e in final.entries] == [("b", 50), ("a", 0)]
     winner = notifier.sent[-1]
     assert winner["uids"] == ["a", "b"]
-    assert winner["body"] == "b#BR1 ganhou 50 PDL."
+    assert winner["body"] == "b#BR1 venceu com 50 pontos."
     # A semana nova começa do elo de agora.
     assert store.snapshots["2026-W49"]["p-b"].entry.tier == "GOLD"  # type: ignore[union-attr]
 

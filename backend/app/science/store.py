@@ -27,6 +27,8 @@ PUBLISHED = "sciences"
 PROGRESS = "scienceProgress"  # scienceProgress/{plataforma}: até onde cada monochamp foi lido
 SEEN = "scienceSeen"          # scienceSeen/{região}: partidas já contadas (últimos 7 dias)
 TOTALS = "scienceTotals"      # scienceTotals/{patch}: partidas com os bans contados
+HISTORY = "scienceHistory"    # scienceHistory/{AAAAMMDDTHHMM}: cada publicação (para o bônus dos squads)
+HISTORY_DAYS = 40
 _BATCH = 400  # o Firestore aceita até 500 operações por lote
 
 
@@ -185,4 +187,29 @@ class FirestoreScienceStore:
         })
 
     async def publish(self, document: dict[str, Any]) -> None:
+        """Publica e guarda uma cópia enxuta no histórico (o bônus dos squads
+        confere a Ciência que valia na hora da partida)."""
+        from datetime import timedelta
+
+        from google.cloud.firestore_v1.base_query import FieldFilter
+
         await self._db.collection(PUBLISHED).document("current").set(document)
+        at = document["updatedAt"]
+        await self._db.collection(HISTORY).document(f"{at:%Y%m%dT%H%M}").set(history_entry(document))
+        old = self._db.collection(HISTORY).where(
+            filter=FieldFilter("publishedAt", "<", at - timedelta(days=HISTORY_DAYS)),
+        )
+        async for snap in old.stream():
+            await snap.reference.delete()
+
+
+def history_entry(document: dict[str, Any]) -> dict[str, Any]:
+    """O que o bônus precisa de cada Ciência: campeão, rota, itens e tier."""
+    return {
+        "publishedAt": document["updatedAt"],
+        "builds": [
+            {"championId": b["championId"], "championName": b["championName"], "role": b["role"],
+             "title": b["title"], "tier": b.get("tier", "C"), "items": [i["id"] for i in b["items"]]}
+            for b in document["builds"]
+        ],
+    }

@@ -1,6 +1,8 @@
 """Store em MEMÓRIA, com o mesmo contrato do FirestoreStore (app/store.py)."""
 
-from app.models import RankSnapshot, RiotId, Squad, SquadMember, UserRecord, WeeklyRanking
+from app.models import (
+    Podium, RankSnapshot, RiotId, ScienceWin, Squad, SquadMember, SquadPeriod, Trophy, UserRecord, WeeklyRanking,
+)
 
 
 class InMemoryStore:
@@ -10,6 +12,7 @@ class InMemoryStore:
         self.codes: dict[str, str] = {}
         self.snapshots: dict[str, dict[str, RankSnapshot]] = {}  # weekId → puuid → retrato
         self.rankings: dict[tuple[str, str], WeeklyRanking] = {}  # (squadId, weekId)
+        self.science_wins: dict[str, list[ScienceWin]] = {}
         self._next_id = 0
 
     def _user(self, uid: str) -> UserRecord:
@@ -98,7 +101,23 @@ class InMemoryStore:
         return self.rankings.get((squad_id, week_id))
 
     async def save_ranking(self, squad_id: str, ranking: WeeklyRanking) -> None:
-        self.rankings[(squad_id, ranking.week_id)] = ranking.model_copy(deep=True)
+        self.rankings[(squad_id, ranking.period_id)] = ranking.model_copy(deep=True)
+
+    async def delete_ranking(self, squad_id: str, period_id: str) -> None:
+        self.rankings.pop((squad_id, period_id), None)
+
+    async def save_period(self, squad_id: str, period: SquadPeriod) -> None:
+        self.squads[squad_id].period = period.model_copy()
+
+    async def add_podium(self, squad_id: str, podium: Podium, trophies: dict[str, Trophy]) -> None:
+        squad = self.squads[squad_id]
+        squad.podiums = [podium, *(p for p in squad.podiums if p.period_id != podium.period_id)][:50]
+        for uid, trophy in trophies.items():
+            if trophy not in self._user(uid).trophies:
+                self._user(uid).trophies.append(trophy)
+
+    async def get_science_wins(self, puuids: list[str]) -> dict[str, list[ScienceWin]]:
+        return {p: list(self.science_wins[p]) for p in puuids if self.science_wins.get(p)}
 
     async def get_fcm_tokens(self, uids: list[str]) -> dict[str, list[str]]:
         return {uid: list(self.users[uid].fcm_tokens) for uid in uids if uid in self.users and self.users[uid].fcm_tokens}
