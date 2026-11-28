@@ -11,7 +11,7 @@ App Android particular, feito para um grupo pequeno de amigos que jogam League o
 
 - **Busca por Riot ID**: elo, nível do invocador e maestrias de campeões.
 - **Histórico de partidas**: rolagem infinita com cache offline.
-- **Squads**: cada pessoa vincula o próprio Riot ID e entra num grupo por código de convite. O grupo tem um ranking semanal, e uma notificação push anuncia o vencedor da semana.
+- **Squads**: cada pessoa vincula o próprio Riot ID e entra num grupo por código de convite. O líder define o período da disputa (semana, 2 semanas, mês ou datas próprias). Os pontos são o PDL ganho na Solo/Duo mais um bônus por vitória jogando uma Ciência (quanto pior o tier da Ciência, maior o bônus). No fim do período, os 3 primeiros ganham troféus no perfil e uma notificação push anuncia o campeão.
 - **Ciências**: a cada 3 horas, uma coleta analisa as partidas ranqueadas recentes de monochamps Desafiante e Grão-Mestre de 12 regiões e destaca builds incomuns que estão ganhando (itens, ordem de habilidades, runa).
 
 ## Arquitetura
