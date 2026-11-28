@@ -347,7 +347,7 @@ def test_coleta_encontra_o_monochamp_grava_e_publica() -> None:
     assert store.patches["16.23"].champions == {MALPHITE: 1}  # +20 de vida
     published = store.published
     assert published is not None and published["patch"] == "16.23"
-    [build] = published["builds"]
+    [build] = [b for b in published["builds"] if b["source"] is None]  # sem as curadas
     assert build["title"] == "Malphite AP no Mid"
     assert build["roleName"] == "Mid"
     assert [i["name"] for i in build["items"]] == ["Capuz da Morte", "Ampulheta de Zhonya", "Tormento de Liandry"]
@@ -402,7 +402,7 @@ def test_chave_recusada_para_mas_publica_o_que_tem() -> None:
     report = collect(store, key_ok=False)
 
     assert report.key_rejected
-    assert store.published is not None and len(store.published["builds"]) == 1
+    assert store.published is not None and len([b for b in store.published["builds"] if b["source"] is None]) == 1
 
 
 def test_agregador_soma_por_build() -> None:
@@ -415,3 +415,37 @@ def test_agregador_soma_por_build() -> None:
 
     [stats] = agg.builds.values()
     assert (stats.games, stats.wins, stats.thirds[6653], stats.boots[3020]) == (2, 2, 2, 2)
+
+
+# ---------- Ciências curadas (vídeos) ----------
+
+def test_curadas_usam_a_build_o_campeao_ou_o_video_para_a_taxa() -> None:
+    from app.science.curated import curated_sciences
+
+    data = {"source": "Mylon", "builds": [
+        {"championId": MALPHITE, "role": "MIDDLE", "title": "A", "items": [3089, 3157], "boots": None, "video": "x1"},
+        {"championId": JINX, "role": "BOTTOM", "title": "B", "items": [3031, 3089], "boots": None, "video": "x2"},
+        {"championId": 1, "role": "TOP", "title": "C", "items": [3068, 3075], "boots": None, "video": "x3",
+         "videoWinRate": 0.76},
+        {"championId": 2, "role": "TOP", "title": "D", "items": [3068, 3075], "boots": None, "video": "x4"},
+    ]}
+    build = BuildStats("16.23", MALPHITE, "MIDDLE", (3089, 3157), games=10, wins=7)
+    jinx = ChampionStats("16.23", JINX, games=40, wins=22)
+
+    a, b, c, d = curated_sciences(data, [build], {JINX: jinx}, base_matches=100, ban_matches=0)
+
+    assert (a.games, a.wins, a.win_rate_basis) == (10, 7, "build")
+    assert (b.games, b.wins, b.win_rate_basis) == (40, 22, "champion")
+    assert (c.wins / c.games, c.win_rate_basis) == (0.75, "video")  # 15 de 20
+    assert (d.games, d.win_rate_basis) == (0, "none")
+    assert a.source == "Mylon" and a.video_url == "https://www.youtube.com/watch?v=x1"
+
+
+def test_lista_curada_do_repositorio_e_valida() -> None:
+    from app.science.curated import load_curated
+
+    data = load_curated()
+    assert data["builds"]
+    for b in data["builds"]:
+        assert b["role"] in ("TOP", "JUNGLE", "MIDDLE", "BOTTOM", "UTILITY")
+        assert 2 <= len(b["items"]) <= 3 and b["video"]

@@ -1,0 +1,27 @@
+{
+  "_comment": "Ciências tiradas dos vídeos do canal do Mylon (youtube.com/@Mylonzete), out–nov/2026. Itens na ordem em que ele fecha. A taxa de vitória vem dos dados da coleta (build, ou o campeão) e, sem dados, do que o vídeo diz.",
+  "source": "Mylon",
+  "builds": [
+    {"championId": 58, "role": "TOP", "title": "Renekton Godzilla", "items": [3050, 3073, 6696], "boots": 3047, "video": "rAOmPUoLzto"},
+    {"championId": 31, "role": "TOP", "title": "Cho'Gath AP do Vietnamita", "items": [3152, 2510, 3110], "boots": 3009, "video": "n27Gvr8ci7A"},
+    {"championId": 42, "role": "TOP", "title": "Corki Top da Coreia", "items": [6692, 3071, 6676], "boots": 3047, "video": "5tUJg_eBBN8"},
+    {"championId": 516, "role": "TOP", "title": "Ornn que Carrega", "items": [2502, 4005, 8020], "boots": 3047, "video": "ufDXbCZkIZE"},
+    {"championId": 114, "role": "TOP", "title": "Fiora de Hidra Raivosa", "items": [3074, 3153, 6333], "boots": 3047, "video": "FXn9yGoi-3A"},
+    {"championId": 22, "role": "TOP", "title": "Ashe Top que Ninguém Encosta", "items": [3087, 3110, 3046], "boots": null, "video": "NvLyRtZRv2I"},
+    {"championId": 14, "role": "TOP", "title": "Sion AD Crítico", "items": [3142, 6676, 3036], "boots": 3009, "video": "XkM3g2Ttw_k"},
+    {"championId": 83, "role": "TOP", "title": "Yorick de Ciclo-Espada", "items": [6699, 3161], "boots": 3047, "video": "ieTgYlbWjMM"},
+    {"championId": 875, "role": "TOP", "title": "Sett de Um Soco", "items": [6631, 2501, 3053], "boots": null, "video": "aAkJeXzX__c"},
+    {"championId": 134, "role": "TOP", "title": "Syndra Top Late Game", "items": [4646, 2503, 3089], "boots": null, "video": "I6mYNDD75wM"},
+    {"championId": 799, "role": "TOP", "title": "Ambessa de Hidra e Semblante", "items": [3074, 3065], "boots": 3047, "video": "U4ZWhmwcLj8"},
+    {"championId": 157, "role": "TOP", "title": "Yasuo de Arco-Escudo", "items": [6673, 3036, 6333], "boots": null, "video": "yKMHLHBT2x8"},
+    {"championId": 106, "role": "TOP", "title": "Volibear AD de Eclipse", "items": [6692, 3078, 6333], "boots": null, "video": "1XQ-_28efrE"},
+    {"championId": 50, "role": "TOP", "title": "Swain Tanque de Coração de Aço", "items": [3084, 4633], "boots": null, "video": "-NlqVFPK_jA", "videoWinRate": 0.76},
+    {"championId": 57, "role": "TOP", "title": "Maokai de Força da Trindade", "items": [3078, 3119, 3302], "boots": 3047, "video": "A0qLhLIp-Gg"},
+    {"championId": 105, "role": "TOP", "title": "Fizz Top de Términus", "items": [2510, 3302], "boots": null, "video": "JU1v1m7FqP0"},
+    {"championId": 163, "role": "TOP", "title": "Taliyah Top da Coreia", "items": [2503, 3116], "boots": 3009, "video": "FJvhjX-uYt0"},
+    {"championId": 17, "role": "TOP", "title": "Teemo de Combate", "items": [3087, 2510, 3302], "boots": null, "video": "gJw0tXXMmYs"},
+    {"championId": 75, "role": "MIDDLE", "title": "Nasus de Força da Trindade no Mid", "items": [3078, 6699, 3031], "boots": 3158, "video": "vqCszAlDsOI"},
+    {"championId": 24, "role": "TOP", "title": "Jax Não Me Toque", "items": [3078, 4005, 3161], "boots": 3158, "video": "gS0rONTRVUM"},
+    {"championId": 526, "role": "TOP", "title": "Rell Top Duelista", "items": [3302, 3143], "boots": null, "video": "PSBwqm__W4s"}
+  ]
+}

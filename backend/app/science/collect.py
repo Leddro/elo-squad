@@ -28,6 +28,7 @@ import httpx
 
 from app.errors import NotFoundError, UpstreamError
 from app.science.aggregate import Aggregator
+from app.science.curated import load_curated
 from app.science.extract import champion_games, extract_build, match_bans
 from app.science.items import ItemCatalog
 from app.science.patch_diff import PatchChanges, diff_champions, diff_items
@@ -231,7 +232,7 @@ async def publish(store: ScienceStore, static: StaticData, now: datetime) -> int
     sciences = pick_sciences(
         await store.list_builds(patches), await store.list_champions(patches), changes, catalog,
         {cid: c["name"] for cid, c in by_id.items()}, fill_to=PREVIEW_FILL,
-        ban_matches=await store.ban_matches(patches),
+        ban_matches=await store.ban_matches(patches), curated=load_curated(),
     )
 
     def item(item_id: int) -> dict[str, Any]:
@@ -263,6 +264,9 @@ async def publish(store: ScienceStore, static: StaticData, now: datetime) -> int
                 "winRate": s.wins / s.games if s.games else 0.0,
                 "pickRate": s.pick_rate,
                 "banRate": s.ban_rate,
+                "source": s.source,
+                "videoUrl": s.video_url,
+                "winRateBasis": s.win_rate_basis,
             }
             for s in sciences
         ],

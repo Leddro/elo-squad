@@ -47,6 +47,9 @@ class Science:
     pick_rate: float = 0.0  # partidas do campeão nesta rota / partidas da base
     ban_rate: float = 0.0   # partidas em que o campeão foi banido / partidas com bans contados
     tier: str = "C"
+    source: str | None = None     # quem criou (Ciência curada de vídeo); None = coleta
+    video_url: str | None = None
+    win_rate_basis: str = "build"  # build | champion | video | none
 
 
 # Tier: posição relativa entre as Ciências publicadas, pela nota que junta
@@ -136,6 +139,7 @@ def pick_sciences(
     champion_names: dict[int, str],
     fill_to: int = 0,
     ban_matches: int = 0,
+    curated: dict | None = None,
 ) -> list[Science]:
     """fill_to > 0 completa a lista com builds "prévia" (ver PREVIEW_FILL).
     Devolve já com tier e ordenada pelo tier (ver assign_tiers)."""
@@ -200,6 +204,10 @@ def pick_sciences(
         picked.append(science)
         if len(picked) == MAX_SCIENCES:
             break
+    if curated:
+        from app.science.curated import curated_sciences
+
+        picked += curated_sciences(curated, builds, by_champion, base_matches, ban_matches)
     return assign_tiers(picked)
 
 
